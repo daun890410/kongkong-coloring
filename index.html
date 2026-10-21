@@ -1,4 +1,4 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="theme-color" content="#dff3f6"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png"><link rel="icon" href="icon-192.png"><style>[hidden]{display:none!important}html,body{margin:0}:root{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}</style></head><body>
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="theme-color" content="#dff3f6"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192.png"><link rel="icon" href="icon-192.png"><style>[hidden]{display:none!important}html,body{margin:0}:root{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}</style></head><body>
 <title>콩콩 색칠놀이</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gaegu:wght@700&display=swap">
@@ -434,34 +434,38 @@ function analyze(img){
   // 선 그림층: 검은 선만 남기고 나머지는 투명 (선이 늘 색 위에 또렷하게)
   const L=lctx.createImageData(W,W);for(let i=0;i<N;i++){const a=255-lum[i];L.data[i*4+3]=a<40?0:Math.min(255,a*1.25)}
   lctx.putImageData(L,0,0);
-  // 칸 나누기: 선을 2px 두껍게 해서 작은 틈을 막는다
-  const line=new Uint8Array(N);for(let i=0;i<N;i++)line[i]=lum[i]<170?1:0;
-  isBar=dilate(dilate(line));
-  owner=new Int32Array(N);R=[null];const stack=new Int32Array(N);
-  for(let start=0;start<N;start++){if(isBar[start]||owner[start])continue;
-    const id=R.length,r={id,area:0,x0:W,y0:W,x1:0,y1:0,border:false,sx:0,sy:0,run:0};R.push(r);
-    let sp=0;stack[sp++]=start;owner[start]=id;
-    while(sp){const p=stack[--sp];const y=(p/W)|0;let l=p,rr=p;const row=y*W;
-      while(l>row&&!isBar[l-1]&&(!owner[l-1]||owner[l-1]===id))l--;
-      while(rr<row+W-1&&!isBar[rr+1]&&(!owner[rr+1]||owner[rr+1]===id))rr++;
-      for(let q=l;q<=rr;q++)owner[q]=id;
+  // 칸 나누기는 절반 크기(512)에서 한다 — 패드에서도 빠르게. 선이 굵어 칠할 때 차이가 안 보인다
+  const H=W>>1,NH=H*H,lineH=new Uint8Array(NH);
+  for(let y=0;y<H;y++)for(let x=0;x<H;x++){const a=(y*2)*W+x*2;if(lum[a]<170||lum[a+1]<170||lum[a+W]<170||lum[a+W+1]<170)lineH[y*H+x]=1}
+  const barH=dil(lineH,H),own=new Int32Array(NH);R=[null];const stack=new Int32Array(NH);
+  for(let start=0;start<NH;start++){if(barH[start]||own[start])continue;
+    const id=R.length,r={id,area:0,x0:H,y0:H,x1:0,y1:0,border:false,sx:0,sy:0,run:0};R.push(r);
+    let sp=0;stack[sp++]=start;own[start]=id;
+    while(sp){const p=stack[--sp];const y=(p/H)|0;let l=p,rr=p;const row=y*H;
+      while(l>row&&!barH[l-1]&&(!own[l-1]||own[l-1]===id))l--;
+      while(rr<row+H-1&&!barH[rr+1]&&(!own[rr+1]||own[rr+1]===id))rr++;
+      for(let q=l;q<=rr;q++)own[q]=id;
       const len=rr-l+1;if(len>r.run){r.run=len;r.sx=((l+rr)>>1)-row;r.sy=y}
       if(l-row<r.x0)r.x0=l-row;if(rr-row>r.x1)r.x1=rr-row;if(y<r.y0)r.y0=y;if(y>r.y1)r.y1=y;
-      if(y===0||y===W-1||l===row||rr===row+W-1)r.border=true;
-      for(const ny of [y-1,y+1]){if(ny<0||ny>=W)continue;const nr=ny*W;let inRun=false;
-        for(let q=l-row;q<=rr-row;q++){const n=nr+q;const ok=!isBar[n]&&!owner[n];
-          if(ok&&!inRun){owner[n]=id;stack[sp++]=n;inRun=true}else if(!ok)inRun=false}}}
+      if(y===0||y===H-1||l===row||rr===row+H-1)r.border=true;
+      for(const ny of [y-1,y+1]){if(ny<0||ny>=H)continue;const nr=ny*H;let inRun=false;
+        for(let q=l-row;q<=rr-row;q++){const n=nr+q;const ok=!barH[n]&&!own[n];
+          if(ok&&!inRun){own[n]=id;stack[sp++]=n;inRun=true}else if(!ok)inRun=false}}}
   }
-  for(let i=0;i<N;i++)if(owner[i])R[owner[i]].area++;
+  for(let i=0;i<NH;i++)if(own[i])R[own[i]].area++;
   // 선 자리는 가까운 칸에 붙인다 (선 밑까지 칠해져 흰 틈이 안 남게)
-  let front=[];for(let i=0;i<N;i++)if(!owner[i]){const y=(i/W)|0,xx=i%W;
-    if((xx>0&&owner[i-1])||(xx<W-1&&owner[i+1])||(y>0&&owner[i-W])||(y<W-1&&owner[i+W]))front.push(i)}
-  for(let step=0;step<10&&front.length;step++){const nf=[],asg=[];
-    for(const i of front){if(owner[i])continue;const xx=i%W;const o=(xx>0&&owner[i-1])||(xx<W-1&&owner[i+1])||owner[i-W]||owner[i+W];if(o)asg.push(i,o)}
-    for(let k=0;k<asg.length;k+=2){const i=asg[k],o=asg[k+1];if(owner[i])continue;owner[i]=o;const r=R[o],xx=i%W,y=(i/W)|0;
+  let front=[];for(let i=0;i<NH;i++)if(!own[i]){const y=(i/H)|0,xx=i%H;
+    if((xx>0&&own[i-1])||(xx<H-1&&own[i+1])||(y>0&&own[i-H])||(y<H-1&&own[i+H]))front.push(i)}
+  for(let step=0;step<6&&front.length;step++){const nf=[],asg=[];
+    for(const i of front){if(own[i])continue;const xx=i%H;const o=(xx>0&&own[i-1])||(xx<H-1&&own[i+1])||own[i-H]||own[i+H];if(o)asg.push(i,o)}
+    for(let k=0;k<asg.length;k+=2){const i=asg[k],o=asg[k+1];if(own[i])continue;own[i]=o;const r=R[o],xx=i%H,y=(i/H)|0;
       if(xx<r.x0)r.x0=xx;if(xx>r.x1)r.x1=xx;if(y<r.y0)r.y0=y;if(y>r.y1)r.y1=y;
-      for(const n of [i-1,i+1,i-W,i+W])if(n>=0&&n<N&&!owner[n])nf.push(n)}
+      for(const n of [i-1,i+1,i-H,i+H])if(n>=0&&n<NH&&!own[n])nf.push(n)}
     front=nf}
+  // 원래 크기(1024)로 늘린다
+  owner=new Int32Array(N);isBar=new Uint8Array(N);
+  for(let y=0;y<W;y++){const hr=(y>>1)*H,row=y*W;for(let x=0;x<W;x++){const k=hr+(x>>1);owner[row+x]=own[k];isBar[row+x]=barH[k]}}
+  for(const r of R){if(!r)continue;r.x0*=2;r.y0*=2;r.x1=r.x1*2+1;r.y1=r.y1*2+1;r.sx*=2;r.sy*=2;r.area*=4}
   // 바탕(테두리에 닿는 가장 큰 칸)과 아주 작은 칸은 「다 칠했나」 셈에서 뺀다
   let bg=0;for(const r of R)if(r&&r.border&&(!bg||r.area>R[bg].area))bg=r.id;
   eligible=0;for(const r of R){if(!r)continue;r.count=r.id!==bg&&r.area>N*.0006;if(r.count)eligible+=r.area}
@@ -473,6 +477,8 @@ function setupBlank(s){owner=new Int32Array(N).fill(1);isBar=new Uint8Array(N);
   if(s){lctx.setLineDash([18,16]);lctx.strokeStyle='rgba(124,116,104,.35)';lctx.lineWidth=5;lctx.beginPath();lctx.moveTo(512,20);lctx.lineTo(512,W-20);
     if(s==='k'){lctx.moveTo(20,512);lctx.lineTo(W-20,512);lctx.moveTo(60,60);lctx.lineTo(W-60,W-60);lctx.moveTo(W-60,60);lctx.lineTo(60,W-60)}
     lctx.stroke();lctx.setLineDash([])}}
+function dil(m,w){const o=new Uint8Array(w*w);
+  for(let y=0;y<w;y++)for(let x=0;x<w;x++){const i=y*w+x;if(m[i]||(x>0&&m[i-1])||(x<w-1&&m[i+1])||(y>0&&m[i-w])||(y<w-1&&m[i+w]))o[i]=1}return o}
 function dilate(m){const o=new Uint8Array(N);
   for(let y=0;y<W;y++)for(let x=0;x<W;x++){const i=y*W+x;if(m[i]||(x>0&&m[i-1])||(x<W-1&&m[i+1])||(y>0&&m[i-W])||(y<W-1&&m[i+W]))o[i]=1}return o}
 function mask(id){if(masks.has(id))return masks.get(id);const r=R[id],w=r.x1-r.x0+1,h=r.y1-r.y0+1;
@@ -691,7 +697,8 @@ function openPic(id,m,idx){store.set('last',m==='story'?'story':m==='tale'?'tale
     if(sv){done=sv.d||{};stickers=sv.s||[];used=sv.u||used;drawStickers(kctx,stickers)}
     if(sv&&sv.p){const p=new Image();p.onload=()=>{pctx.drawImage(p,0,0,W,W);ready()};p.onerror=ready;p.src=sv.p}else ready()};
   if(isBlank(id)){setupBlank(sym);restore();return}
-  const img=new Image();img.onload=()=>setTimeout(()=>{analyze(img);restore()},20);
+  const img=new Image();img.onload=()=>{lctx.clearRect(0,0,W,W);const sc=Math.min(W/img.width,W/img.height);lctx.drawImage(img,(W-img.width*sc)/2,(W-img.height*sc)/2,img.width*sc,img.height*sc);
+    board.classList.remove('loading');setTimeout(()=>{analyze(img);restore()},30)};
   img.onerror=()=>{board.classList.remove('loading');setBubble('그림을 아직 못 가져왔어요. 다른 그림을 골라 볼까요?')};img.src=src(id)}
 
 function saveNow(){if(!pic)return;clearTimeout(saveTimer);
