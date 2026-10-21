@@ -20,7 +20,7 @@ button:focus-visible{outline:4px solid var(--sun);outline-offset:3px}
 .screen{height:100%;padding-block:6px;box-sizing:border-box}
 
 /* ── 첫 화면 ── */
-#home,#gallery{display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-width:900px;margin:0 auto}
+#home,#gallery{display:flex;flex-direction:column;gap:14px;overflow-y:auto;margin:0 auto;padding-inline:max(0px,calc((100% - 1100px)/2));-webkit-overflow-scrolling:touch}   /* 스크롤은 화면 전체 폭 · 내용은 가운데 1100까지 */
 #home>*,#gallery>*{flex-shrink:0}
 .cover{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;background:var(--paper);
   border-radius:28px;padding:18px 20px;box-shadow:0 5px 0 var(--edge)}
@@ -75,7 +75,7 @@ h2 .link{margin-left:auto;font-size:18px;background:#fff;border-radius:999px;pad
 .ages{display:flex;flex-wrap:wrap;gap:8px}.ages button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;background:#fff;border-radius:18px;padding:10px 14px;box-shadow:0 3px 0 var(--edge);font-size:20px;text-align:left}
 .ages button small{font-family:var(--hand);font-size:15px;color:var(--mute)}
 .meBtn span{font-family:var(--emoji)}
-#who{display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-width:900px;margin:0 auto}#who>*{flex-shrink:0}
+#who{display:flex;flex-direction:column;gap:14px;overflow-y:auto;margin:0 auto;padding-inline:max(0px,calc((100% - 900px)/2))}#who>*{flex-shrink:0}
 .grown{font-family:var(--hand);font-size:16px;color:var(--mute);text-align:center;padding:4px 0 14px}
 .grown button{text-decoration:underline;color:var(--mute);font-size:16px;font-family:var(--hand)}
 
