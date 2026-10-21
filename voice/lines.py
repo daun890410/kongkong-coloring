@@ -34,6 +34,7 @@ def all_lines():
         for i,c in enumerate(COLORS): L[f'done_{k}_{i}']=t.format(c=c)
     for k,v in FRIEND.items(): L[f'get_{k}']=f'{v} 스티커를 받았어요! 도감에 붙여 둘게요.'
     for k,v in FREE.items(): L[f'free_{k}']=f'{v} 그림이에요. 마음대로 칠해 봐요!'
+    L.update(cat_lines())
     L['free_blank']='하얀 도화지예요. 마음대로 그려 봐요!'
     L['free_mirror']='한쪽에 그리면 반대쪽에도 똑같이 생겨요. 나비 날개를 그려 볼까요?'
     L['free_kaleido']='한 번 그으면 여덟 군데에 똑같이 생겨요. 반짝반짝 눈송이를 만들어 볼까요?'
@@ -47,4 +48,16 @@ def all_lines():
     L['draw_done']='우와, 멋진 그림이에요!'
     L['end']='오늘 이야기는 여기까지! 내일 또 콩콩이를 만나요. 안녕!'
     L['lock']='앞 이야기를 먼저 칠해요.'
+    return L
+
+# 마음대로 색칠 카테고리 (tales/cats.json) — 그림 이름 · 카테고리 첫마디
+import json as _j
+from pathlib import Path as _P
+_C=_j.load(open(_P(__file__).parent.parent/'tales'/'cats.json',encoding='utf-8'))
+def cat_lines():
+    L={'cat_draw':'그리기 놀이예요. 마음대로 그려 봐요!'}
+    for c in _C['cats']:
+        L['cat_'+c['id']]=f"{c['name']} 그림이에요. 마음에 드는 걸 골라 봐요!"
+        for i,nm in c['items']:
+            L['free_'+i]=f"{nm} 국기예요. 색을 보고 칠해 봐요!" if c['id']=='flag' else f"{nm} 그림이에요. 마음대로 칠해 봐요!"
     return L

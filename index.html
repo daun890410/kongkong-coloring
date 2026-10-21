@@ -49,6 +49,9 @@ h2 .link{margin-left:auto;font-size:18px;background:#fff;border-radius:999px;pad
 .thumb .big{position:absolute;inset:0;display:grid;place-items:center;font-size:44px;font-family:var(--emoji)}
 .thumb .name{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:14px;color:var(--mute)}
 .thumb.lock{filter:grayscale(1);opacity:.45}
+.thumb.cat{background:#fff}.thumb.cat .big{font-size:52px;padding-bottom:18px}.thumb.cat .name{font-size:17px;color:var(--ink)}
+.thumb.back{background:var(--sun)}.thumb.back .big{font-size:40px}
+.fref{height:36px;vertical-align:middle;border-radius:4px;margin-left:8px;box-shadow:0 0 0 2px var(--edge)}
 .dex{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:8px;background:var(--paper);border-radius:22px;padding:12px;box-shadow:0 4px 0 var(--edge)}
 @media (max-width:560px){.dex{grid-template-columns:repeat(5,minmax(0,1fr))}}
 .slot{aspect-ratio:1;border-radius:50%;background:var(--sky);display:grid;place-items:center;font-size:clamp(22px,4vw,34px);font-family:var(--emoji)}
@@ -186,7 +189,7 @@ h2 .link{margin-left:auto;font-size:18px;background:#fff;border-radius:999px;pad
   <div class="row" id="storyThumbs"></div>
   <h2>📚 명작 동화 색칠 <small>이야기를 들으며 장면마다 칠해요</small></h2>
   <div class="tales" id="taleList"></div>
-  <h2>🎨 마음대로 색칠 <small>아무 그림이나 골라요</small><button class="link" id="openGallery">🖼️ 내 그림 모아보기</button></h2>
+  <h2>🎨 마음대로 색칠 <small>먼저 좋아하는 것을 골라요</small><button class="link" id="openGallery">🖼️ 내 그림 모아보기</button></h2>
   <div class="grid" id="freeThumbs"></div>
   <div class="grown">어른용 · <button id="resetAll">길게 눌러 처음부터</button></div>
 </section>
@@ -253,7 +256,7 @@ const STORY=[
  {id:'s09',f:'🎂',fn:'케이크',anim:'party',ask:'숲 친구들이 모두 모여 <b>파티</b>를 해요. 마지막 그림을 칠해 줘요!',
   done:['{c} 파티가 열렸어요! 숲이 다시 알록달록해졌어요. 모두 고마워! 끝!','숲이 다시 알록달록해졌어요. 콩콩이와 친구들이 말해요. 고마워! 끝!'],tip:'“파티에 누구를 초대하고 싶어?”'},
 ];
-const FREE=[['f01','사자'],['f02','아기 코끼리'],['f03','기린'],['f04','펭귄'],['f05','강아지'],['f06','아기 고양이'],['f07','곰돌이'],
+let FREE=[['f01','사자'],['f02','아기 코끼리'],['f03','기린'],['f04','펭귄'],['f05','강아지'],['f06','아기 고양이'],['f07','곰돌이'],
  ['f08','소방차'],['f09','기차'],['f10','비행기'],['f11','돛단배'],['f12','포크레인'],['f13','생일 케이크'],['f14','아이스크림'],
  ['f15','딸기'],['f16','아기 공룡'],['f17','유니콘'],['f18','로켓']];
 const BLANK={blank:['하얀 도화지','🖍️','하얀 도화지예요. 마음대로 그려 봐요!'],mirror:['나비 거울 그림','🦋','한쪽에 그리면 반대쪽에도 똑같이 생겨요. 나비 날개를 그려 볼까요?'],
@@ -276,6 +279,8 @@ const STKIMG={};
 function stkImg(e,cb){const k=e.slice(4);if(!STKIMG[k]){const im=new Image();STKIMG[k]=im;im.onload=()=>{im.ok=true;cb&&cb()};im.src=`img/stk/${k}.png`}else if(!STKIMG[k].ok&&cb)STKIMG[k].addEventListener('load',cb,{once:true});return STKIMG[k]}
 let stkTab='반짝';
 const src=id=>`img/${id}.png`;
+let CATS=[],FLAGTIP={},curCat=null;
+fetch('tales/cats.json').then(r=>r.json()).then(j=>{CATS=j.cats;FREE=CATS.flatMap(c=>c.items);FLAGTIP=j.flagTip||{};if(!$('home').hidden)renderHome()}).catch(()=>{});
 let TALES=[];fetch('tales/tales.json').then(r=>r.json()).then(j=>{TALES=j.tales;if(!$('home').hidden)renderHome()}).catch(()=>{});
 let taleIdx=0,pageIdx=0;
 const taleOf=id=>{const m=/^(t\d\d)_(\d)$/.exec(id);return m?{t:TALES.findIndex(x=>x.id===m[1]),p:+m[2]-1}:null};
@@ -284,7 +289,7 @@ const isBlank=id=>id in BLANK;
 const $=id=>document.getElementById(id);
 
 /* ───────── 저장 (없어도 동작) ───────── */
-const SHARED=new Set(['bgm','bgm2','profiles','pid']);
+const SHARED=new Set(['bgm','bgm2','bgm3','profiles','pid']);
 let PID=(()=>{try{return JSON.parse(localStorage.getItem('kk:pid'))||''}catch(e){return''}})();
 const kkey=k=>'kk:'+(SHARED.has(k)||!PID||PID==='p0'?'':PID+':')+k;   // 첫 아이(p0)는 예전 기록을 그대로 이어 쓴다
 const store={get(k){try{return JSON.parse(localStorage.getItem(kkey(k)))}catch(e){return null}},
@@ -338,47 +343,22 @@ async function speak(keys,delay=0,after){const a=audio();lastKeys=keys;const tk=
   if(tk===vTok){duck(false);if(after)after()}}
 function hush(){vTok++;if(vSrc){try{vSrc.stop()}catch(e){}vSrc=null}duck(false)}
 
-/* ───────── 배경음악: 같은 곡이 되풀이되지 않게 그 자리에서 계속 지어 연주한다 ─────────
-   16마디마다 조 · 빠르기 · 악기(오르골 · 마림바 · 종 · 플루트)가 바뀌고, 2마디 가락을 변주해 이어 간다. 목소리가 나오면 작아진다. */
-const BGM={on:store.get('bgm2')===true,g:null,timer:null,next:0,bar:0,sec:null,motif:null};
-const SCALE=[0,2,4,5,7,9,11],PENTA=[0,2,4,7,9];
-const PROGS=[[0,5,3,4],[0,3,4,0],[5,3,0,4],[0,4,5,3],[3,4,0,0],[0,5,1,4]];
-const INSTR=['box','marimba','bell','flute'];
-function bgmNewSection(){const r=a=>a[(Math.random()*a.length)|0];
-  BGM.sec={key:r([0,5,7,2,-3]),bpm:76+((Math.random()*22)|0),prog:r(PROGS),inst:r(INSTR),arp:Math.random()<.45,bars:16};BGM.motif=null}
-function midi(n){return 440*Math.pow(2,(n-69)/12)}
-function voiceNote(t,n,dur,kind,vol){const a=ac,o=a.createOscillator(),g=a.createGain();let f=midi(n);
-  if(kind==='box'){o.type='sine';const o2=a.createOscillator(),g2=a.createGain();o2.type='sine';o2.frequency.value=f*4;g2.gain.value=vol*.18;o2.connect(g2).connect(BGM.g);
-    g2.gain.setValueAtTime(vol*.18,t);g2.gain.exponentialRampToValueAtTime(.0001,t+.25);o2.start(t);o2.stop(t+.3);g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+Math.max(.6,dur))}
-  else if(kind==='marimba'){o.type='triangle';g.gain.setValueAtTime(vol*1.1,t);g.gain.exponentialRampToValueAtTime(.0001,t+.45)}
-  else if(kind==='bell'){o.type='sine';const o2=a.createOscillator(),g2=a.createGain();o2.type='sine';o2.frequency.value=f*2.76;g2.gain.value=vol*.25;o2.connect(g2).connect(BGM.g);
-    g2.gain.setValueAtTime(vol*.25,t);g2.gain.exponentialRampToValueAtTime(.0001,t+.8);o2.start(t);o2.stop(t+.9);g.gain.setValueAtTime(vol*.8,t);g.gain.exponentialRampToValueAtTime(.0001,t+1.4)}
-  else if(kind==='flute'){o.type='triangle';const l=a.createOscillator(),lg=a.createGain();l.frequency.value=5;lg.gain.value=f*.008;l.connect(lg).connect(o.frequency);l.start(t);l.stop(t+dur+.3);
-    g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vol*.7,t+.08);g.gain.setValueAtTime(vol*.7,t+dur*.8);g.gain.exponentialRampToValueAtTime(.0001,t+dur+.25)}
-  else if(kind==='pad'){o.type='sine';g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(vol,t+.5);g.gain.setValueAtTime(vol,t+dur-.4);g.gain.linearRampToValueAtTime(.0001,t+dur)}
-  else if(kind==='bass'){o.type='triangle';g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur)}
-  o.frequency.value=f;o.connect(g).connect(BGM.g);o.start(t);o.stop(t+dur+1.5)}
-function bgmBar(t){if(!BGM.sec||BGM.bar%BGM.sec.bars===0)bgmNewSection();const S=BGM.sec,beat=60/S.bpm,root=60+S.key;
-  const deg=S.prog[BGM.bar%4],chord=[0,2,4].map(i=>SCALE[(deg+i)%7]+12*Math.floor((deg+i)/7)+root-12);
-  chord.forEach(n=>voiceNote(t,n,beat*4,'pad',.045));voiceNote(t,chord[0]-12,beat*1.6,'bass',.09);voiceNote(t+beat*2,chord[0]-12,beat*1.4,'bass',.07);
-  // 가락: 2마디 동기를 만들고, 다음 마디들은 화음에 맞춰 조금씩 바꾼다
-  if(!BGM.motif||BGM.bar%8===0){const rh=[[1,0,1,1,0,1,1,0],[1,1,0,1,1,0,1,0],[1,0,0,1,1,1,0,1],[1,0,1,0,1,0,1,1]][(Math.random()*4)|0];
-    BGM.motif=rh.map(x=>x?PENTA[(Math.random()*5)|0]+(Math.random()<.25?12:0):null)}
-  const shift=SCALE[deg%7]%12>6?-5:0;
-  BGM.motif.forEach((m,i)=>{if(m===null)return;let n=root+12+m+(BGM.bar%2?shift:0);if(Math.random()<.18)n+=PENTA[(Math.random()*3)|0]-2;
-    voiceNote(t+i*beat/2,n,beat*.9,S.inst,.07)});
-  if(S.arp&&BGM.bar%2===1)[0,1,2,1].forEach((k,i)=>voiceNote(t+beat*2+i*beat/2,chord[k]+24,beat*.5,'box',.025));
-  BGM.bar++;return beat*4}
-function bgmTick(){if(!BGM.g)return;while(BGM.next<ac.currentTime+.6)BGM.next+=bgmBar(BGM.next)}
-function bgmStart(){const a=audio();if(!a||BGM.g||!BGM.on)return;BGM.g=a.createGain();BGM.g.gain.value=0;
-  const dl=a.createDelay(),fb=a.createGain(),lp=a.createBiquadFilter();dl.delayTime.value=.32;fb.gain.value=.28;lp.type='lowpass';lp.frequency.value=2400;
-  BGM.out=a.createGain();BGM.out.gain.value=.55;BGM.g.connect(BGM.out);BGM.g.connect(dl);dl.connect(lp).connect(fb).connect(dl);lp.connect(BGM.out);BGM.out.connect(master());
-  BGM.g.gain.setTargetAtTime(1,a.currentTime,1.5);BGM.next=a.currentTime+.2;BGM.timer=setInterval(bgmTick,120);bgmBtn()}
-function bgmStop(){if(!BGM.g)return;const g=BGM.g,o=BGM.out;BGM.g=null;clearInterval(BGM.timer);g.gain.setTargetAtTime(0,ac.currentTime,.3);setTimeout(()=>{try{o.disconnect()}catch(e){}},1500);bgmBtn()}
-function duck(on){if(BGM.out&&ac)BGM.out.gain.setTargetAtTime(on?.2:.55,ac.currentTime,.25)}
+/* ───────── 배경음악: Pixabay 아이 곡 8개를 섞어 이어 튼다 (music/목록.md) · 목소리가 나오면 작아진다 ───────── */
+const BGM={on:store.get('bgm3')!==false,el:null,g:null,list:[],i:0};
+const TRACKS=['m1','m2','m3','m4','m5','m6','m7','m8','y1','y2','y3'];
+function bgmNext(){if(!BGM.list.length||BGM.i>=BGM.list.length){const prev=BGM.list[BGM.list.length-1];BGM.list=TRACKS.slice().sort(()=>Math.random()-.5);
+    if(BGM.list[0]===prev)BGM.list.push(BGM.list.shift());BGM.i=0}
+  BGM.el.src=`music/${BGM.list[BGM.i++]}.mp3`;BGM.el.play().catch(()=>{})}
+function bgmStart(){const a=audio();if(!a||!BGM.on)return;
+  if(!BGM.el){BGM.el=new Audio();BGM.el.preload='auto';BGM.el.crossOrigin='anonymous';BGM.el.addEventListener('ended',bgmNext);
+    try{BGM.g=a.createGain();BGM.g.gain.value=0;a.createMediaElementSource(BGM.el).connect(BGM.g).connect(master())}catch(e){BGM.g=null}bgmNext()}
+  else BGM.el.play().catch(()=>{});
+  if(BGM.g)BGM.g.gain.setTargetAtTime(.35,a.currentTime,1);else BGM.el.volume=window.__mute?0:.35;bgmBtn()}
+function bgmStop(){if(!BGM.el)return;if(BGM.g)BGM.g.gain.setTargetAtTime(0,ac.currentTime,.3);setTimeout(()=>{if(!BGM.on)BGM.el.pause()},900);bgmBtn()}
+function duck(on){if(!BGM.el||!BGM.on)return;if(BGM.g&&ac)BGM.g.gain.setTargetAtTime(on?.1:.35,ac.currentTime,.25);else BGM.el.volume=on?.1:.35}
 function bgmBtn(){document.querySelectorAll('.bgm').forEach(b=>{b.textContent=BGM.on?'🎵':'🔇';b.setAttribute('aria-label',BGM.on?'음악 끄기':'음악 켜기')})}
-function bgmToggle(){BGM.on=!BGM.on;store.set('bgm2',BGM.on);if(BGM.on)bgmStart();else bgmStop();bgmBtn()}
-document.addEventListener('pointerdown',()=>{if(BGM.on&&!BGM.g)bgmStart()},{capture:true});
+function bgmToggle(){BGM.on=!BGM.on;store.set('bgm3',BGM.on);if(BGM.on)bgmStart();else bgmStop();bgmBtn()}
+document.addEventListener('pointerdown',()=>{if(BGM.on&&(!BGM.el||BGM.el.paused))bgmStart()},{capture:true});
 
 /* ───────── 색칠 엔진: 선 안쪽만 칠해지는 손가락 붓 ───────── */
 const W=1024,N=W*W;
@@ -649,6 +629,7 @@ function openPic(id,m,idx){store.set('last',m==='story'?'story':m==='tale'?'tale
   if(m==='tale'){const pg=TALES[taleIdx].pages[pageIdx];setBubble(pg.tell,'“다음엔 어떻게 될까?” 하고 물어봐 주세요.');speak([`tale_${id}_tell`],300)}
   else if(st){setBubble(st.ask,st.tip);speak(['ask_'+st.id],300)}
   else if(isBlank(id)){setBubble(BLANK[id][2],'“무엇을 그렸는지 이야기해 줄래?” 하고 물어봐 주세요.');speak(['free_'+id],300)}
+  else if(FLAGTIP[id]){setBubble(`<b>${nameOf(id)}</b> 국기예요. 이렇게 칠해요 <img class="fref" src="img/flagref/${id}.png" alt=""> <span style="font-size:.8em">${FLAGTIP[id]}</span>`);speak(['free_'+id],300)}
   else{setBubble(`<b>${nameOf(id)}</b> 그림이에요. 마음대로 칠해 봐요!`,'“무슨 색으로 칠하고 싶어? 왜?” 하고 물어봐 주세요.');speak(['free_'+id],300)}
   show('paint');
   const sv=store.get('pic:'+id);
@@ -770,7 +751,16 @@ var renderHome=function(){const prog=store.get('story')||0,fr=store.get('friends
       `<div class="t">${t.title}</div><div class="dots">${t.pages.map((_,i)=>`<i class="${i<pr?'on':''}"></i>`).join('')}</div>`+(pr>=5?'<span class="badge">⭐</span>':'');
     const li=b.querySelector('img.line');li.onerror=()=>{li.replaceWith(Object.assign(document.createElement('span'),{className:'soon',textContent:t.emoji}))};
     b.onclick=()=>{audio();if(pr>=5)openTaleBook(ti);else openTale(ti,pr)};tl.appendChild(b)});
-  const fg=$('freeThumbs');fg.innerHTML='';[...Object.keys(BLANK),...FREE.map(f=>f[0])].forEach(id=>{const b=thumb(id,nameOf(id),false,'');b.onclick=()=>{audio();openPic(id,'free')};fg.appendChild(b)})}
+  const fg=$('freeThumbs');fg.innerHTML='';
+  const cats=[{id:'draw',name:'그리기 놀이',emoji:'🖍️',items:Object.keys(BLANK).map(k=>[k,BLANK[k][0]])},...CATS],cur=cats.find(c=>c.id===curCat);
+  if(!cur){cats.forEach(c=>{const b=document.createElement('button');b.className='thumb cat';b.setAttribute('aria-label',c.name);
+      b.innerHTML=`<span class="big">${c.emoji}</span><span class="name">${c.name}</span>`;
+      b.onclick=()=>{audio();curCat=c.id;renderHome();speak(['cat_'+c.id]);fg.scrollIntoView({block:'start'})};fg.appendChild(b)});return}
+  const back=document.createElement('button');back.className='thumb cat back';back.innerHTML=`<span class="big">◀</span><span class="name">${cur.emoji} ${cur.name}</span>`;
+  back.onclick=()=>{audio();curCat=null;renderHome();fg.scrollIntoView({block:'start'})};fg.appendChild(back);
+  cur.items.forEach(([id,name])=>{const b=thumb(id,name,false,'');const li=b.querySelector('img.line');
+    if(li)li.onerror=()=>{b.innerHTML=`<span class="big">${cur.emoji}</span><span class="name">${name} · 준비 중</span>`;b.classList.add('lock')};
+    b.onclick=()=>{audio();openPic(id,'free')};fg.appendChild(b)})}
 document.querySelectorAll('.who').forEach(b=>b.onclick=()=>{audio();store.set('reader',b.dataset.r);renderHome();speak(['free_blank'])});
 $('startStory').onclick=()=>{audio();const prog=store.get('story')||0;if(prog>=STORY.length)openBook(0);else openPic(STORY[prog].id,'story',prog)};
 let holdT;const rs=$('resetAll');
