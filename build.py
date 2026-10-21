@@ -9,3 +9,8 @@ head=('<!doctype html><html lang="ko"><head><meta charset="utf-8">'
       '</head><body>\n')
 sw='<script>if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{})</script>'
 Path('index.html').write_text(head+body+'\n'+sw+'\n</body></html>\n',encoding='utf-8'); print('index.html 만듦')
+
+# 앱(서비스 워커) 저장본 판 번호를 빌드할 때마다 바꾼다 → 설치한 앱이 다음에 열릴 때 옛 저장본을 지우고 새 파일을 받는다
+import re, datetime
+sw=Path('sw.js'); t=sw.read_text(encoding='utf-8')
+sw.write_text(re.sub(r"const V='kk-[^']*';", "const V='kk-"+datetime.datetime.now().strftime('%Y%m%d%H%M%S')+"';", t),encoding='utf-8'); print('sw 판 갱신')
