@@ -1,0 +1,9 @@
+# 원본 그림 · 시험 · 작업 파일은 올리지 않는다 (앱은 img · snd · voice 묶음 · tales 만 쓴다)
+그림/
+_test.html
+_pub*.json
+tools_*.py
+.claude/
+voice/*/*.mp3
+!voice/*/pk_*.mp3
+__pycache__/
