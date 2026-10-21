@@ -345,7 +345,8 @@ function hush(){vTok++;if(vSrc){try{vSrc.stop()}catch(e){}vSrc=null}duck(false)}
 
 /* ───────── 배경음악: Pixabay 아이 곡 8개를 섞어 이어 튼다 (music/목록.md) · 목소리가 나오면 작아진다 ───────── */
 const BGM={on:store.get('bgm3')!==false,el:null,g:null,list:[],i:0};
-const TRACKS=['m1','m2','m3','m4','m5','m6','m7','m8','y1','y2','y3'];
+const BGV=.15;   // 배경음악 크기 (다운 2026-10-22 「더 줄여」 .35 → .15)
+const TRACKS=['m1','m2','m3','m4','m5','y1','y2','y3'];   // m6 · m7 · m8 은 다운이 뺌 (2026-10-22)
 function bgmNext(){if(!BGM.list.length||BGM.i>=BGM.list.length){const prev=BGM.list[BGM.list.length-1];BGM.list=TRACKS.slice().sort(()=>Math.random()-.5);
     if(BGM.list[0]===prev)BGM.list.push(BGM.list.shift());BGM.i=0}
   BGM.el.src=`music/${BGM.list[BGM.i++]}.mp3`;BGM.el.play().catch(()=>{})}
@@ -353,9 +354,9 @@ function bgmStart(){const a=audio();if(!a||!BGM.on)return;
   if(!BGM.el){BGM.el=new Audio();BGM.el.preload='auto';BGM.el.crossOrigin='anonymous';BGM.el.addEventListener('ended',bgmNext);
     try{BGM.g=a.createGain();BGM.g.gain.value=0;a.createMediaElementSource(BGM.el).connect(BGM.g).connect(master())}catch(e){BGM.g=null}bgmNext()}
   else BGM.el.play().catch(()=>{});
-  if(BGM.g)BGM.g.gain.setTargetAtTime(.35,a.currentTime,1);else BGM.el.volume=window.__mute?0:.35;bgmBtn()}
+  if(BGM.g)BGM.g.gain.setTargetAtTime(BGV,a.currentTime,1);else BGM.el.volume=window.__mute?0:BGV;bgmBtn()}
 function bgmStop(){if(!BGM.el)return;if(BGM.g)BGM.g.gain.setTargetAtTime(0,ac.currentTime,.3);setTimeout(()=>{if(!BGM.on)BGM.el.pause()},900);bgmBtn()}
-function duck(on){if(!BGM.el||!BGM.on)return;if(BGM.g&&ac)BGM.g.gain.setTargetAtTime(on?.1:.35,ac.currentTime,.25);else BGM.el.volume=on?.1:.35}
+function duck(on){if(!BGM.el||!BGM.on)return;if(BGM.g&&ac)BGM.g.gain.setTargetAtTime(on?BGV*.35:BGV,ac.currentTime,.25);else BGM.el.volume=on?BGV*.35:BGV}
 function bgmBtn(){document.querySelectorAll('.bgm').forEach(b=>{b.textContent=BGM.on?'🎵':'🔇';b.setAttribute('aria-label',BGM.on?'음악 끄기':'음악 켜기')})}
 function bgmToggle(){BGM.on=!BGM.on;store.set('bgm3',BGM.on);if(BGM.on)bgmStart();else bgmStop();bgmBtn()}
 document.addEventListener('pointerdown',()=>{if(BGM.on&&(!BGM.el||BGM.el.paused))bgmStart()},{capture:true});

@@ -1,0 +1,15 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>배경음악 듣기</title>
+<style>body{font-family:"Malgun Gothic",sans-serif;background:#dff3f6;color:#33302c;margin:0;padding:16px}h1{font-size:22px;margin:0 0 12px}
+.t{display:flex;align-items:center;gap:10px;background:#fff;border-radius:14px;padding:8px 12px;margin-bottom:8px}.t.on{outline:3px solid #4bb37a}
+.t b{min-width:34px}.t span{flex:1;min-width:0}audio{height:32px}button{font:inherit;font-size:18px;padding:8px 16px;border:none;border-radius:999px;background:#ffc93c;cursor:pointer;margin-bottom:12px}</style></head><body>
+<h1>콩콩 색칠놀이 배경음악 8곡</h1><button id="all">▶ 처음부터 모두 듣기</button>
+<div id="list"></div>
+<script>
+const T=[['m1','Kids - Kids Happy Music · NastelBom'],['m2','Kids Happy · NastelBom'],['m3','Children · The_Mountain'],['m4','Happy Ukulele · AtlasAudio'],
+['m5','Funny Ukulele · AtlasAudio'],
+['y1','유아그림판 1'],['y2','유아그림판 2'],['y3','유아그림판 3']];
+const list=document.getElementById('list');const els=T.map(([f,n])=>{const d=document.createElement('div');d.className='t';d.innerHTML=`<b>${f}</b><span>${n}</span><audio controls preload="none" src="${f}.mp3"></audio>`;list.appendChild(d);return d});
+const auds=els.map(d=>d.querySelector('audio'));
+auds.forEach((a,i)=>{a.onplay=()=>{auds.forEach(b=>{if(b!==a)b.pause()});els.forEach(e=>e.classList.toggle('on',e===els[i]))};a.onended=()=>{if(auds[i+1])auds[i+1].play()}});
+document.getElementById('all').onclick=()=>{auds[0].currentTime=0;auds[0].play()};
+</script></body></html>
