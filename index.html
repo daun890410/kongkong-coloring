@@ -167,7 +167,7 @@ h2 .link{margin-left:auto;font-size:18px;background:#fff;border-radius:999px;pad
     <h2>새 친구 만들기 <small>어른이 도와주세요</small></h2>
     <div class="ava" id="avaPick"></div>
     <input id="kidName" maxlength="8" placeholder="이름 (예: 하윤)" autocomplete="off">
-    <div class="ages" id="agePick"></div>
+    <div class="ages" id="agePick" hidden></div>
     <button class="bigbtn" id="kidSave">시작하기</button>
   </div>
 </section>
@@ -284,7 +284,7 @@ const isBlank=id=>id in BLANK;
 const $=id=>document.getElementById(id);
 
 /* ───────── 저장 (없어도 동작) ───────── */
-const SHARED=new Set(['bgm','profiles','pid']);
+const SHARED=new Set(['bgm','bgm2','profiles','pid']);
 let PID=(()=>{try{return JSON.parse(localStorage.getItem('kk:pid'))||''}catch(e){return''}})();
 const kkey=k=>'kk:'+(SHARED.has(k)||!PID||PID==='p0'?'':PID+':')+k;   // 첫 아이(p0)는 예전 기록을 그대로 이어 쓴다
 const store={get(k){try{return JSON.parse(localStorage.getItem(kkey(k)))}catch(e){return null}},
@@ -340,7 +340,7 @@ function hush(){vTok++;if(vSrc){try{vSrc.stop()}catch(e){}vSrc=null}duck(false)}
 
 /* ───────── 배경음악: 같은 곡이 되풀이되지 않게 그 자리에서 계속 지어 연주한다 ─────────
    16마디마다 조 · 빠르기 · 악기(오르골 · 마림바 · 종 · 플루트)가 바뀌고, 2마디 가락을 변주해 이어 간다. 목소리가 나오면 작아진다. */
-const BGM={on:store.get('bgm')!==false,g:null,timer:null,next:0,bar:0,sec:null,motif:null};
+const BGM={on:store.get('bgm2')===true,g:null,timer:null,next:0,bar:0,sec:null,motif:null};
 const SCALE=[0,2,4,5,7,9,11],PENTA=[0,2,4,7,9];
 const PROGS=[[0,5,3,4],[0,3,4,0],[5,3,0,4],[0,4,5,3],[3,4,0,0],[0,5,1,4]];
 const INSTR=['box','marimba','bell','flute'];
@@ -377,7 +377,7 @@ function bgmStart(){const a=audio();if(!a||BGM.g||!BGM.on)return;BGM.g=a.createG
 function bgmStop(){if(!BGM.g)return;const g=BGM.g,o=BGM.out;BGM.g=null;clearInterval(BGM.timer);g.gain.setTargetAtTime(0,ac.currentTime,.3);setTimeout(()=>{try{o.disconnect()}catch(e){}},1500);bgmBtn()}
 function duck(on){if(BGM.out&&ac)BGM.out.gain.setTargetAtTime(on?.2:.55,ac.currentTime,.25)}
 function bgmBtn(){document.querySelectorAll('.bgm').forEach(b=>{b.textContent=BGM.on?'🎵':'🔇';b.setAttribute('aria-label',BGM.on?'음악 끄기':'음악 켜기')})}
-function bgmToggle(){BGM.on=!BGM.on;store.set('bgm',BGM.on);if(BGM.on)bgmStart();else bgmStop();bgmBtn()}
+function bgmToggle(){BGM.on=!BGM.on;store.set('bgm2',BGM.on);if(BGM.on)bgmStart();else bgmStop();bgmBtn()}
 document.addEventListener('pointerdown',()=>{if(BGM.on&&!BGM.g)bgmStart()},{capture:true});
 
 /* ───────── 색칠 엔진: 선 안쪽만 칠해지는 손가락 붓 ───────── */
@@ -642,7 +642,7 @@ addEventListener('resize',()=>{if(!$('paint').hidden)fit()});
 const nameOf=id=>{if(isBlank(id))return BLANK[id][0];const tl=taleOf(id);if(tl&&TALES[tl.t])return TALES[tl.t].title+' '+(tl.p+1);return(FREE.find(f=>f[0]===id)||[])[1]};
 function setBubble(text,tip){$('bubble').innerHTML=text+(tip?`<span class="tip">👪 함께 해요 · ${tip}</span>`:'')}
 
-function openPic(id,m,idx){mode=m;storyIdx=idx||0;pic=id;done={};undoStack=[];stickers=[];used={c:[],pt:false,rb:false};celebrated=false;celebrating=false;drewSomething=false;
+function openPic(id,m,idx){store.set('last',m==='story'?'story':m==='tale'?'tale':'free');mode=m;storyIdx=idx||0;pic=id;done={};undoStack=[];stickers=[];used={c:[],pt:false,rb:false};celebrated=false;celebrating=false;drewSomething=false;
   owner=null;sym=id==='mirror'?'m':id==='kaleido'?'k':'';glowCache.clear();$('award').hidden=true;
   pctx.clearRect(0,0,W,W);lctx.clearRect(0,0,W,W);kctx.clearRect(0,0,W,W);board.classList.add('loading');$('nextBtn').hidden=true;
   const st=m==='story'?STORY[storyIdx]:null;
@@ -780,7 +780,7 @@ rs.addEventListener('pointerdown',()=>{holdT=setTimeout(()=>{[...STORY.map(s=>s.
 document.querySelectorAll('.bgm').forEach(b=>{const btn=b.closest('button');btn.onclick=e=>{e.stopPropagation();audio();bgmToggle()}});bgmBtn();
 let newAva='🐰',newAge='kid';
 function renderWho(){const list=profiles(),box=$('kids');box.innerHTML='';
-  list.forEach(k=>{const b=document.createElement('button');b.className='kid';b.innerHTML=`<span class="e">${k.ava}</span>${k.name||'친구'}<small>${AGES[k.age].name}</small>`;
+  list.forEach(k=>{const b=document.createElement('button');b.className='kid';b.innerHTML=`<span class="e">${k.ava}</span>${k.name||'친구'}`;
     b.onclick=()=>{audio();pickKid(k.id)};box.appendChild(b)});
   const add=document.createElement('button');add.className='kid add';add.innerHTML='<span class="e">＋</span>새 친구';add.onclick=()=>{$('newkid').hidden=false;$('kidName').focus()};box.appendChild(add);
   $('newkid').hidden=list.length>0;
@@ -791,10 +791,10 @@ function renderWho(){const list=profiles(),box=$('kids');box.innerHTML='';
   show('who')}
 $('kidSave').onclick=()=>{audio();const list=profiles();const id=list.length?'p'+Date.now().toString(36):'p0';
   list.push({id,ava:newAva,name:$('kidName').value.trim(),age:newAge});localStorage.setItem('kk:profiles',JSON.stringify(list));$('kidName').value='';pickKid(id,true)};
-function pickKid(id,fresh){PID=id;try{localStorage.setItem('kk:pid',JSON.stringify(id))}catch(e){}const k=me(),a=AGES[k.age];
+function pickKid(id,fresh){PID=id;try{localStorage.setItem('kk:pid',JSON.stringify(id))}catch(e){}const k=me(),a=AGES.kid;
   if(fresh||store.get('size')==null){store.set('size',a.size)}sizeIdx=store.get('size');document.querySelectorAll('.size').forEach((x,i)=>x.setAttribute('aria-pressed',i===sizeIdx));
-  setTool(a.tool);buildStickers();land(a.land)}
-function land(where){renderHome();
+  setTool(a.tool);buildStickers();land(fresh?'home':(store.get('last')||'home'))}
+function land(where){renderHome();if(where==='tale'){show('home');setTimeout(()=>$('taleList').scrollIntoView({block:'start'}),50);return}
   if(where==='story'){const prog=store.get('story')||0;if(prog<STORY.length){openPic(STORY[prog].id,'story',prog);return}}
   show('home');if(where==='free')setTimeout(()=>$('freeThumbs').scrollIntoView({block:'start'}),50)}
 $('meBtn').onclick=()=>{audio();hush();renderWho()};
