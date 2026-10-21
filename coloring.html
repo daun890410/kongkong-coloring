@@ -165,6 +165,24 @@ h2 .link{margin-left:auto;font-size:18px;background:#fff;border-radius:999px;pad
 .viewer p{margin:0;font-family:var(--hand);font-size:17px;color:var(--mute);text-align:center}
 .empty{font-family:var(--hand);font-size:20px;color:var(--mute);text-align:center;padding:30px 0}
 @media (min-aspect-ratio:5/4){.stickers{width:240px}.stk-grid{grid-template-columns:repeat(3,minmax(0,1fr));max-height:56vh}.stk-tabs{flex-wrap:wrap}}
+/* 세로 화면(휴대폰): 아래 칸은 옆으로 넘기는 얇은 띠로 — 도화지를 크게 */
+@media (max-aspect-ratio:5/4){
+  #paint{gap:4px}
+  .top{gap:6px}.round{width:40px;height:40px;font-size:20px}
+  .bubble{font-size:16px;padding:5px 12px;border-radius:16px}.bubble .tip{display:none}
+  #paint .tools{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;gap:6px;padding:2px;scrollbar-width:none}
+  #paint .tools::-webkit-scrollbar,.colors::-webkit-scrollbar,.patterns::-webkit-scrollbar{display:none}
+  .tool{flex:0 0 auto;width:44px;height:44px;font-size:22px;border-radius:14px}
+  .palette{gap:5px}
+  .sizes{justify-content:flex-start;gap:6px}.size{width:42px;height:30px;border-radius:10px}
+  .colors{display:flex;overflow-x:auto;gap:8px;padding:3px 2px;scrollbar-width:none}
+  .crayon{flex:0 0 40px;width:40px;max-width:40px}.crayon[aria-pressed="true"]{outline-width:4px;outline-offset:2px;transform:scale(1.08)}
+  .crayon.plus{font-size:22px}
+  .patterns{display:flex;overflow-x:auto;gap:6px;justify-content:flex-start;padding:3px 2px;scrollbar-width:none}
+  .pat{flex:0 0 32px;width:32px;border-width:2px;border-radius:10px}
+  .stk-grid{grid-template-columns:repeat(7,minmax(0,1fr));max-height:104px}.stk-b{font-size:24px;border-radius:12px}
+  .next{padding:8px 16px;font-size:20px;right:6px;bottom:6px}
+}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-width:420px){.tool{width:50px;height:50px;font-size:25px}.round{width:48px;height:48px}.colors{gap:6px}}
 </style>
