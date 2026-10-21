@@ -394,7 +394,7 @@ document.addEventListener('pointerdown',()=>{if(BGM.on&&(!BGM.el||BGM.el.paused)
 /* ───────── 색칠 엔진: 선 안쪽만 칠해지는 손가락 붓 ───────── */
 const W=1024,N=W*W;
 const cvP=$('cvPaint'),cvL=$('cvLines'),cvS=$('cvStk'),cvA=$('cvAnim');[cvP,cvL,cvS,cvA].forEach(c=>c.width=c.height=W);
-const pctx=cvP.getContext('2d',{willReadFrequently:true}),lctx=cvL.getContext('2d'),kctx=cvS.getContext('2d'),actx=cvA.getContext('2d');
+const pctx=cvP.getContext('2d'),lctx=cvL.getContext('2d'),kctx=cvS.getContext('2d'),actx=cvA.getContext('2d');
 const scr=document.createElement('canvas');scr.width=scr.height=W;const sctx=scr.getContext('2d');
 let owner,isBar,R=[],eligible=0,masks=new Map(),done={},pic=null,undoStack=[],stickers=[],used={c:[],pt:false,rb:false},sym='';
 /* 거울(좌우) · 만화경(여덟 갈래): 가운데를 기준으로 뒤집는 행렬들 */
@@ -530,7 +530,7 @@ function seg(x0,y0,x1,y1,stamps){const id=cur.r,r=R[id],m=mask(id),rad=brushR()+
     const px=x0+(x1-x0)*t+Math.cos(a)*d,py=y0+(y1-y0)*t+Math.sin(a)*d,s=1.5+Math.random()*3.5;
     sctx.fillStyle=Math.random()<.5?'#fff':pattern==='rainbow'?`hsl(${(hue+60)%360},95%,75%)`:light(color,.6);sctx.beginPath();
     for(let j=0;j<8;j++){const rr=j%2?s*.35:s*1.6,aa=j*Math.PI/4;sctx.lineTo(px+Math.cos(aa)*rr,py+Math.sin(aa)*rr)}sctx.fill()}}
-  sctx.globalCompositeOperation='destination-in';sctx.drawImage(m.c,m.x,m.y);sctx.restore();
+  sctx.globalCompositeOperation='destination-in';sctx.drawImage(m.c,bx0-m.x,by0-m.y,w,h,bx0,by0,w,h);sctx.restore();
   pctx.globalCompositeOperation=tool==='eraser'?'destination-out':'source-over';
   pctx.drawImage(scr,bx0,by0,w,h,bx0,by0,w,h);pctx.globalCompositeOperation='source-over'}
 function seg2(x0,y0,x1,y1){const st=tool==='magic'?magicStamps(x0,y0,x1,y1):null;
@@ -558,10 +558,11 @@ function placeSticker(x,y){const base=[75,120,185][sizeIdx];const s={e:stkPick,x
 
 /* 붓 손가락 이벤트 */
 const board=$('board');
-function toXY(e){const b=cvP.getBoundingClientRect();return[(e.clientX-b.left)*W/b.width,(e.clientY-b.top)*W/b.height]}
+let bRect=null;function toXY(e){const b=bRect||cvP.getBoundingClientRect();return[(e.clientX-b.left)*W/b.width,(e.clientY-b.top)*W/b.height]}
+let pend=[],rafOn=false;function flush(){rafOn=false;if(!cur){pend=[];return}for(const [x,y] of pend){seg2(cur.x,cur.y,x,y);cur.x=x;cur.y=y}pend=[]}
 let pointerId=null;
 board.addEventListener('pointerdown',e=>{if(!owner||pointerId!==null||celebrating)return;audio();
-  const [x,y]=toXY(e);hideHint();
+  bRect=cvP.getBoundingClientRect();const [x,y]=toXY(e);hideHint();
   if(tool==='sticker'){pushUndo();placeSticker(x,y);return}
   const id=regionAt(x,y);if(!id)return;pointerId=e.pointerId;try{board.setPointerCapture(e.pointerId)}catch(_){}
   pushUndo();
@@ -569,9 +570,9 @@ board.addEventListener('pointerdown',e=>{if(!owner||pointerId!==null||celebratin
     syms().slice(1).forEach(T=>{const [px,py]=tx(T,x,y),o=regionAt(px,py);if(o&&!seen.includes(o)){seen.push(o);magicFill(o,px,py)}});return}
   noteUse();cur={r:id,x,y};mAcc=MAGICS.find(m=>m[0]===magic)[3];mN=0;seg2(x,y,x,y);rub()});
 board.addEventListener('pointermove',e=>{if(!cur||e.pointerId!==pointerId)return;
-  const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];for(const ev of evs.length?evs:[e]){const [x,y]=toXY(ev);seg2(cur.x,cur.y,x,y);cur.x=x;cur.y=y}
-  rub()});
-const endStroke=e=>{if(!cur||e.pointerId!==pointerId)return;stopRub();const id=cur.r;cur=null;pointerId=null;
+  const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];for(const ev of evs.length?evs:[e])pend.push(toXY(ev));
+  if(!rafOn){rafOn=true;requestAnimationFrame(flush)}rub()});
+const endStroke=e=>{if(!cur||e.pointerId!==pointerId)return;flush();bRect=null;stopRub();const id=cur.r;cur=null;pointerId=null;
   if(R[id].count){const cov=coverage(id);if(cov>=.6){if(!done[id])tone(880,.15,'triangle',.06);done[id]=1}else delete done[id]}
   drewSomething=true;afterChange()};
 board.addEventListener('pointerup',endStroke);board.addEventListener('pointercancel',endStroke);
@@ -586,8 +587,8 @@ function magicFill(id,x,y){if(!id)return;const r=R[id],m=mask(id),maxR=Math.hypo
     pctx.drawImage(scr,m.x,m.y,m.w,m.h,m.x,m.y,m.w,m.h);
     if(k<1)requestAnimationFrame(step);else{fin=true;sparkleAt(r.sx,r.sy,6);drewSomething=true;afterChange()}}step(t0)}
 
-function pushUndo(){undoStack.push({img:pctx.getImageData(0,0,W,W),done:{...done},stk:stickers.map(s=>({...s})),used:JSON.parse(JSON.stringify(used))});if(undoStack.length>10)undoStack.shift()}
-function undo(){const u=undoStack.pop();if(!u){tone(220,.15);return}pctx.putImageData(u.img,0,0);done=u.done;stickers=u.stk;if(u.used)used=u.used;drawStickers(kctx,stickers);tone(330,.18,'sine',.12);afterChange(true)}
+function pushUndo(){const cv=document.createElement('canvas');cv.width=cv.height=W;cv.getContext('2d').drawImage(cvP,0,0);undoStack.push({cv,done:{...done},stk:stickers.map(s=>({...s})),used:JSON.parse(JSON.stringify(used))});if(undoStack.length>10)undoStack.shift()}
+function undo(){const u=undoStack.pop();if(!u){tone(220,.15);return}pctx.clearRect(0,0,W,W);pctx.drawImage(u.cv,0,0);done=u.done;stickers=u.stk;if(u.used)used=u.used;drawStickers(kctx,stickers);tone(330,.18,'sine',.12);afterChange(true)}
 
 /* 이 그림만 처음부터 (되돌리기로 다시 살릴 수 있다) */
 function resetPic(){if(!owner||celebrating)return;pushUndo();pctx.clearRect(0,0,W,W);stickers=[];drawStickers(kctx,stickers);
