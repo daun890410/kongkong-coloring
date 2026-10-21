@@ -153,6 +153,13 @@ h2 .link{margin-left:auto;font-size:18px;background:#fff;border-radius:999px;pad
 .flip .num{font-size:20px;color:var(--mute);min-width:70px;text-align:center;font-variant-numeric:tabular-nums}
 .viewer{position:fixed;inset:0;background:rgba(51,48,44,.6);display:grid;place-items:center;padding:16px;z-index:5}
 .viewer[hidden]{display:none}
+.card.pick{gap:12px;width:min(92vw,560px)}.card.pick .pt{font-size:20px;color:var(--ink)}
+.card.pick canvas{width:100%;border-radius:16px;touch-action:none;cursor:crosshair;box-shadow:0 0 0 3px var(--edge)}
+#pkHue{aspect-ratio:2/1}#pkGray{aspect-ratio:10/1}
+.prow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
+.pv{width:64px;height:64px;border-radius:50%;box-shadow:inset 0 -6px 0 rgba(0,0,0,.18),0 0 0 4px #fff,0 0 0 6px var(--edge)}
+.crayon.plus{background:conic-gradient(#ff4b4b,#ffd400,#8ad13f,#4cc3ff,#8b5cf6,#ff7eb6,#ff4b4b);display:grid;place-items:center;font-size:30px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+.crayon.plus::after{display:none}
 .viewer .card{background:var(--paper);border-radius:26px;padding:14px;display:flex;flex-direction:column;gap:10px;align-items:center;max-width:min(92vw,620px)}
 .viewer img{width:100%;max-height:70vh;object-fit:contain;border-radius:16px;background:#fff;-webkit-touch-callout:default;user-select:auto}
 .viewer p{margin:0;font-family:var(--hand);font-size:17px;color:var(--mute);text-align:center}
@@ -230,6 +237,12 @@ h2 .link{margin-left:auto;font-size:18px;background:#fff;border-radius:999px;pad
     <div class="bubble">내 그림 모아보기 <span class="tip">그림을 누르면 크게 보여요. 어른은 큰 그림을 길게 눌러 사진으로 저장할 수 있어요.</span></div></div>
   <div class="grid" id="galGrid"></div>
 </section>
+<div class="viewer" id="picker" hidden><div class="card pick">
+  <p class="pt">원하는 색을 톡 눌러요</p>
+  <canvas id="pkHue" width="600" height="300"></canvas>
+  <canvas id="pkGray" width="600" height="60"></canvas>
+  <div class="prow"><span class="pv" id="pkPrev"></span><button class="bigbtn" id="pkUse">이 색으로 칠하기</button><button class="who" id="pkClose">닫기</button></div>
+</div></div>
 <div class="viewer" id="viewer" hidden><div class="card"><img id="viewImg" alt="내가 칠한 그림"><p>휴대폰 · 태블릿: 그림을 길게 누르면 사진으로 저장돼요</p><button class="bigbtn" id="viewClose">닫기</button></div></div>
 
 <script>
@@ -484,7 +497,8 @@ function drawStamp(x,s){const c=color;x.save();x.translate(s.x,s.y);x.scale(1.4,
     x.bezierCurveTo(r*.6,-r*1.3,r*1.6,-r*.2,0,r*.9);x.fill();x.fillStyle='rgba(255,255,255,.6)';x.beginPath();x.arc(-r*.55,-r*.35,r*.22,0,7);x.fill()}
   x.restore()}
 function noteUse(){if(tool==='eraser')return;if(pattern==='rainbow'){used.rb=true;return}if(pattern!=='none')used.pt=true;
-  const i=COLORS.findIndex(c=>c[0]===color);if(!used.c.includes(i))used.c.push(i)}
+  const i=nearestIdx(color);if(!used.c.includes(i))used.c.push(i)}
+function nearestIdx(c){const x=hex(c);let b=0,bd=1e9;COLORS.forEach(([h],i)=>{const y=hex(h),d=(x[0]-y[0])**2+(x[1]-y[1])**2+(x[2]-y[2])**2;if(d<bd){bd=d;b=i}});return b}
 function seg(x0,y0,x1,y1,stamps){const id=cur.r,r=R[id],m=mask(id),rad=brushR()+4;
   const bx0=Math.max(r.x0,Math.floor(Math.min(x0,x1)-rad)),by0=Math.max(r.y0,Math.floor(Math.min(y0,y1)-rad));
   const bx1=Math.min(r.x1+1,Math.ceil(Math.max(x0,x1)+rad)),by1=Math.min(r.y1+1,Math.ceil(Math.max(y0,y1)+rad));
@@ -684,6 +698,24 @@ TOOLS.forEach(([k,ico,name])=>{const b=document.createElement('button');b.classN
   if(k!=='undo'&&k!=='reset'){b.dataset.k=k;b.setAttribute('aria-pressed',k===tool)}
   b.onclick=()=>{audio();if(k==='undo'){undo();return}if(k==='reset'){resetPic();return}setTool(k);
     if(k==='fill'||k==='sticker')oneShot('sparkle',.6,.7);else oneShot(rubKind(),.8,.4)};$('tools').appendChild(b)});
+function selectColor(c,b,i){audio();color=c;if(tool==='eraser')setTool('brush');
+  document.querySelectorAll('.crayon').forEach(x=>x.setAttribute('aria-pressed',x===b));tone(440+(i||0)*45,.15,'sine',.1);
+  if(pattern==='rainbow'){pattern='none';document.querySelectorAll('.pat').forEach((x,j)=>x.setAttribute('aria-pressed',j===0))}drawPatButtons()}
+function buildMyColors(){document.querySelectorAll('.crayon.mine,.crayon.plus').forEach(x=>x.remove());
+  (store.get('mycolors')||[]).forEach((c,i)=>{const b=document.createElement('button');b.className='crayon mine';b.style.background=c;b.setAttribute('aria-label','내 색');
+    b.setAttribute('aria-pressed',c===color);b.onclick=()=>selectColor(c,b,i);$('colors').appendChild(b)});
+  const p=document.createElement('button');p.className='crayon plus';p.textContent='＋';p.setAttribute('aria-label','내 색 만들기');p.onclick=()=>{audio();openPicker()};$('colors').appendChild(p)}
+let pkColor='#ff4b4b';
+function openPicker(){const h=$('pkHue'),x=h.getContext('2d');for(let i=0;i<600;i++)for(let j=0;j<300;j+=3){x.fillStyle=`hsl(${i*.6},${j<150?95:95-(j-150)*.3}%,${88-j*.24}%)`;x.fillRect(i,j,1,3)}
+  const g=$('pkGray'),y=g.getContext('2d'),gr=y.createLinearGradient(0,0,600,0);gr.addColorStop(0,'#ffffff');gr.addColorStop(1,'#111111');y.fillStyle=gr;y.fillRect(0,0,600,60);
+  pkColor=color;$('pkPrev').style.background=pkColor;$('picker').hidden=false}
+function pickAt(cv,e){const r=cv.getBoundingClientRect(),px=Math.max(0,Math.min(cv.width-1,(e.clientX-r.left)*cv.width/r.width)),py=Math.max(0,Math.min(cv.height-1,(e.clientY-r.top)*cv.height/r.height));
+  const d=cv.getContext('2d').getImageData(px|0,py|0,1,1).data;pkColor='#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join('');$('pkPrev').style.background=pkColor}
+['pkHue','pkGray'].forEach(id=>{const cv=$(id);let down=false;cv.addEventListener('pointerdown',e=>{down=true;pickAt(cv,e);tone(700,.06,'sine',.06)});
+  cv.addEventListener('pointermove',e=>{if(down)pickAt(cv,e)});addEventListener('pointerup',()=>down=false)});
+$('pkUse').onclick=()=>{let list=(store.get('mycolors')||[]).filter(c=>c!==pkColor);list.unshift(pkColor);list=list.slice(0,6);store.set('mycolors',list);
+  $('picker').hidden=true;buildMyColors();const b=document.querySelector('.crayon.mine');selectColor(pkColor,b,3);oneShot('sparkle',.6,.6)};
+$('pkClose').onclick=()=>{$('picker').hidden=true};
 COLORS.forEach(([c,name],i)=>{const b=document.createElement('button');b.className='crayon';b.style.background=c;b.setAttribute('aria-label',name);
   b.setAttribute('aria-pressed',i===0);b.onclick=()=>{audio();color=c;if(tool==='eraser')setTool('brush');
     document.querySelectorAll('.crayon').forEach(x=>x.setAttribute('aria-pressed',x===b));tone(440+i*45,.15,'sine',.1);
@@ -693,6 +725,7 @@ function drawPatButtons(){document.querySelectorAll('.pat').forEach(b=>{const k=
 PATTERNS.forEach(([k,name],i)=>{const b=document.createElement('button');b.className='pat';b.dataset.k=k;b.setAttribute('aria-label',name);
   b.setAttribute('aria-pressed',i===0);b.onclick=()=>{audio();pattern=k;if(tool==='eraser')setTool('brush');
     document.querySelectorAll('.pat').forEach(x=>x.setAttribute('aria-pressed',x===b));tone(520+i*60,.15,'triangle',.1)};$('patterns').appendChild(b)});
+buildMyColors();
 drawPatButtons();
 [['작게',12],['보통',22],['크게',34]].forEach(([name,px],i)=>{const b=document.createElement('button');b.className='size';b.setAttribute('aria-label','굵기 '+name);
   b.innerHTML=`<i style="width:${px}px;height:${px}px"></i>`;b.setAttribute('aria-pressed',i===sizeIdx);
@@ -783,7 +816,7 @@ $('kidSave').onclick=()=>{audio();const list=profiles();const id=list.length?'p'
   list.push({id,ava:newAva,name:$('kidName').value.trim(),age:newAge});localStorage.setItem('kk:profiles',JSON.stringify(list));$('kidName').value='';pickKid(id,true)};
 function pickKid(id,fresh){PID=id;try{localStorage.setItem('kk:pid',JSON.stringify(id))}catch(e){}const k=me(),a=AGES.kid;
   if(fresh||store.get('size')==null){store.set('size',a.size)}sizeIdx=store.get('size');document.querySelectorAll('.size').forEach((x,i)=>x.setAttribute('aria-pressed',i===sizeIdx));
-  setTool(a.tool);buildStickers();land(fresh?'home':(store.get('last')||'home'))}
+  setTool(a.tool);buildStickers();buildMyColors();land(fresh?'home':(store.get('last')||'home'))}
 function land(where){renderHome();if(where==='tale'){show('home');setTimeout(()=>$('taleList').scrollIntoView({block:'start'}),50);return}
   if(where==='story'){const prog=store.get('story')||0;if(prog<STORY.length){openPic(STORY[prog].id,'story',prog);return}}
   show('home');if(where==='free')setTimeout(()=>$('freeThumbs').scrollIntoView({block:'start'}),50)}
