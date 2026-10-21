@@ -183,6 +183,25 @@ h2 .link{margin-left:auto;font-size:18px;background:#fff;border-radius:999px;pad
   .stk-grid{grid-template-columns:repeat(7,minmax(0,1fr));max-height:104px}.stk-b{font-size:24px;border-radius:12px}
   .next{padding:8px 16px;font-size:20px;right:6px;bottom:6px}
 }
+/* 첫 화면 바로 가기 */
+h2[id]{scroll-margin-top:62px}
+.jump{display:flex;gap:8px;position:sticky;top:0;z-index:2;background:var(--sky);padding:6px 0}
+.jump button{flex:1;background:#fff;border-radius:999px;padding:10px 8px;font-size:17px;box-shadow:0 3px 0 var(--edge);white-space:nowrap}
+/* 휴대폰 첫 화면: 작게 · 한 줄에 셋 */
+@media (max-width:600px){
+  #home{gap:10px}.cover{padding:12px 14px;gap:10px;border-radius:22px}.cover h1{font-size:26px}.cover p{font-size:15px}
+  .reader{margin-top:8px;font-size:14px;gap:6px}.who{padding:6px 10px;font-size:15px}.who span{font-size:19px}
+  .bigbtn{padding:10px 16px;font-size:20px}.bigbtn .ico{font-size:24px}
+  .jump button{font-size:14px;padding:8px 4px}
+  h2{font-size:18px;margin-top:2px}h2 small{font-size:13px;width:100%}h2 .link{font-size:14px;padding:5px 10px}
+  .dex{grid-template-columns:repeat(9,minmax(0,1fr));gap:4px;padding:8px;border-radius:16px}.slot{font-size:18px}
+  .row .thumb{flex:0 0 74px;width:74px}
+  .grid,.tales{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .thumb{border-radius:16px;box-shadow:0 3px 0 var(--edge)}
+  .thumb.cat .big{font-size:34px;padding-bottom:14px}.thumb.cat .name,.thumb .name{font-size:12px;bottom:4px}
+  .tale{border-radius:16px}.tale .t{font-size:13px;padding:4px 6px 0}.tale .dots{padding:2px 6px 6px;gap:3px}.tale .dots i{width:7px;height:7px}
+  .tale .badge{font-size:18px}
+}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-width:420px){.tool{width:50px;height:50px;font-size:25px}.round{width:48px;height:48px}.colors{gap:6px}}
 </style>
@@ -207,13 +226,14 @@ h2 .link{margin-left:auto;font-size:18px;background:#fff;border-radius:999px;pad
         <button class="who" data-r="ruri"><span>👧</span>루리</button><button class="who bgm-h" id="bgmHome"><span class="bgm">🎵</span>음악</button></div></div>
     <button class="bigbtn" id="startStory"><span class="ico">📖</span><span id="startLabel">이야기 시작</span></button>
   </div>
+  <div class="jump"><button data-j="storyH">📖 콩콩이 이야기</button><button data-j="taleH">📚 명작 동화</button><button data-j="freeH">🎨 마음대로 색칠</button></div>
   <h2>🐰 콩콩이 친구 도감 <small>이야기를 칠하면 친구 스티커가 생겨요</small></h2>
   <div class="dex" id="dex"></div>
-  <h2>📖 이야기 그림 <small>차례대로 열려요</small></h2>
+  <h2 id="storyH">📖 이야기 그림 <small>차례대로 열려요</small></h2>
   <div class="row" id="storyThumbs"></div>
-  <h2>📚 명작 동화 색칠 <small>이야기를 들으며 장면마다 칠해요</small></h2>
+  <h2 id="taleH">📚 명작 동화 색칠 <small>이야기를 들으며 장면마다 칠해요</small></h2>
   <div class="tales" id="taleList"></div>
-  <h2>🎨 마음대로 색칠 <small>먼저 좋아하는 것을 골라요</small><button class="link" id="openGallery">🖼️ 내 그림 모아보기</button></h2>
+  <h2 id="freeH">🎨 마음대로 색칠 <small>먼저 좋아하는 것을 골라요</small><button class="link" id="openGallery">🖼️ 내 그림 모아보기</button></h2>
   <div class="grid" id="freeThumbs"></div>
   <div class="grown">어른용 · <button id="resetAll">길게 눌러 처음부터</button></div>
 </section>
@@ -841,5 +861,6 @@ function land(where){renderHome();if(where==='tale'){show('home');setTimeout(()=
   show('home');if(where==='free')setTimeout(()=>$('freeThumbs').scrollIntoView({block:'start'}),50)}
 $('meBtn').onclick=()=>{audio();hush();renderWho()};
 const _rh=renderHome;renderHome=function(){_rh();const k=me();$('meBtn').innerHTML=k?`<span>${k.ava}</span>${k.name||'친구'} · 바꾸기`:'친구 고르기'};
+document.querySelectorAll('.jump button').forEach(b=>b.onclick=()=>{audio();if(b.dataset.j==='freeH'&&curCat){curCat=null;renderHome()}$(b.dataset.j).scrollIntoView({behavior:'smooth',block:'start'})});
 (function boot(){const list=profiles();if(!list.length||!me()){renderWho();return}if(list.length>1){renderWho();return}pickKid(PID)})();
 </script>
