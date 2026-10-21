@@ -24,7 +24,7 @@ button:focus-visible{outline:4px solid var(--sun);outline-offset:3px}
 .cover{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;background:var(--paper);
   border-radius:28px;padding:18px 20px;box-shadow:0 5px 0 var(--edge)}
 @media (max-width:560px){.cover{grid-template-columns:minmax(0,1fr)}}
-.cover h1{margin:0;font-size:clamp(28px,6vw,46px);line-height:1.1;text-wrap:balance}
+.cover h1{margin:0;font-size:clamp(26px,4.4vw,40px);line-height:1.1;text-wrap:balance}
 .cover p{margin:6px 0 0;font-family:var(--hand);font-size:20px;color:var(--mute)}
 .reader{display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap;font-family:var(--hand);font-size:19px;color:var(--mute)}
 .who{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:999px;background:#fff;box-shadow:0 3px 0 var(--edge);font-family:var(--display);font-size:19px;color:var(--ink)}
@@ -223,7 +223,7 @@ h2[id]{scroll-margin-top:62px}
     <div><h1>콩콩이의 색깔 찾기</h1><p>숲의 색깔이 모두 사라졌어요. 콩콩이와 함께 찾아 줄래요?</p>
       <div class="reader"><button class="who meBtn" id="meBtn"></button>읽어 주는 친구
         <button class="who" data-r="gunwoo"><span>👦</span>건우</button>
-        <button class="who" data-r="ruri"><span>👧</span>루리</button><button class="who bgm-h" id="bgmHome"><span class="bgm">🎵</span>음악</button></div></div>
+        <button class="who" data-r="ruri"><span>👧</span>루리</button><button class="who fsBtn" aria-label="전체 화면"><span>⛶</span>전체 화면</button><button class="who bgm-h" id="bgmHome"><span class="bgm">🎵</span>음악</button></div></div>
     <button class="bigbtn" id="startStory"><span class="ico">📖</span><span id="startLabel">이야기 시작</span></button>
   </div>
   <div class="jump"><button data-j="storyH">📖 콩콩이 이야기</button><button data-j="taleH">📚 명작 동화</button><button data-j="freeH">🎨 마음대로 색칠</button></div>
@@ -242,7 +242,7 @@ h2[id]{scroll-margin-top:62px}
   <div class="top">
     <button class="round" id="goHome" aria-label="처음 화면">🏠</button>
     <div class="bubble" id="bubble"></div>
-    <button class="round bgm" aria-label="음악">🎵</button><button class="round" id="sayAgain" aria-label="다시 듣기">🔊</button>
+    <button class="round fsBtn" aria-label="전체 화면">⛶</button><button class="round bgm" aria-label="음악">🎵</button><button class="round" id="sayAgain" aria-label="다시 듣기">🔊</button>
   </div>
   <div class="stage" id="stage">
     <div class="board loading" id="board">
@@ -862,5 +862,10 @@ function land(where){renderHome();if(where==='tale'){show('home');setTimeout(()=
 $('meBtn').onclick=()=>{audio();hush();renderWho()};
 const _rh=renderHome;renderHome=function(){_rh();const k=me();$('meBtn').innerHTML=k?`<span>${k.ava}</span>${k.name||'친구'} · 바꾸기`:'친구 고르기'};
 document.querySelectorAll('.jump button').forEach(b=>b.onclick=()=>{audio();if(b.dataset.j==='freeH'&&curCat){curCat=null;renderHome()}$(b.dataset.j).scrollIntoView({behavior:'smooth',block:'start'})});
+function fsToggle(){const d=document,el=d.documentElement;try{if(d.fullscreenElement||d.webkitFullscreenElement){(d.exitFullscreen||d.webkitExitFullscreen).call(d)}
+  else{(el.requestFullscreen||el.webkitRequestFullscreen).call(el).catch?.(()=>{})}}catch(e){}}
+document.querySelectorAll('.fsBtn').forEach(b=>b.onclick=e=>{e.stopPropagation();audio();fsToggle()});
+const fsOK=!!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen)&&!matchMedia('(display-mode: fullscreen)').matches;
+document.querySelectorAll('.fsBtn').forEach(b=>b.hidden=!fsOK);
 (function boot(){const list=profiles();if(!list.length||!me()){renderWho();return}if(list.length>1){renderWho();return}pickKid(PID)})();
 </script>
