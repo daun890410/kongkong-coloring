@@ -333,7 +333,7 @@ const PRAISE={p_c1:'한 가지 색으로 꼼꼼하게 칠했네!',p_c2:'두 가�
  p_pattern:'무늬로도 칠했네! 멋진 생각이야!',p_rainbow:'무지개로 칠했구나! 반짝반짝 멋지다!',p_full:'끝까지 다 칠했어! 정말 열심히 했다!'};
 const COLORS=[['#ff4b4b','빨강'],['#ff9a1f','주황'],['#ffd400','노랑'],['#8ad13f','연두'],['#22a85a','초록'],['#4cc3ff','하늘색'],
  ['#2f6bff','파랑'],['#8b5cf6','보라'],['#ff7eb6','분홍'],['#a0643c','갈색'],['#ffc9a3','살구색'],['#4a4a4a','까망']];
-const TOOLS=[['brush','🖌️','붓'],['crayon','🖍️','크레용'],['glitter','✨','반짝이'],['magic','🪄','마법 붓'],['fill','🪣','톡 채우기'],['sticker','🌟','스티커'],['eraser','🧽','지우개'],['undo','↩️','되돌리기'],['tostk','🏷️','스티커로 만들기'],['reset','🔄','이 그림 처음부터']];
+const TOOLS=[['brush','🖌️','붓'],['crayon','🖍️','크레용'],['glitter','✨','반짝이'],['magic','🪄','마법 붓'],['fill','🪣','톡 채우기'],['sticker','🌟','스티커'],['eraser','🧽','지우개'],['wipe','🧼','칸 지우기'],['undo','↩️','되돌리기'],['tostk','🏷️','스티커로 만들기'],['reset','🔄','이 그림 처음부터']];
 const STK_SETS=[['반짝',['⭐','🌟','✨','💖','❤️','🌈','🎀','👑','💎','🫧','🌙','☀️']],
  ['그림',[]],
  ['동물',['🐶','🐱','🐰','🐻','🐼','🦁','🐯','🐸','🐥','🐧','🦄','🐞','🦋','🐝','🐠','🐳','🦖','🐢']],
@@ -481,7 +481,9 @@ function analyze(img){
   // 칸 나누기는 절반 크기(512)에서 한다 — 패드에서도 빠르게. 선이 굵어 칠할 때 차이가 안 보인다
   const H=W>>1,NH=H*H,lineH=new Uint8Array(NH);
   for(let y=0;y<H;y++)for(let x=0;x<H;x++){const a=(y*2)*W+x*2;if(lum[a]<170||lum[a+1]<170||lum[a+W]<170||lum[a+W+1]<170)lineH[y*H+x]=1}
-  const barH=dil(lineH,H),own=new Int32Array(NH);R=[null];const stack=new Int32Array(NH);
+  // 끊긴 선의 틈(6px 안팎)을 메운다: 3번 넓혔다가 3번 깎으면 선 두께는 그대로, 틈만 막힌다
+  let cl=lineH;for(let k=0;k<3;k++)cl=dil(cl,H);for(let k=0;k<3;k++)cl=ero(cl,H);for(let i=0;i<NH;i++)cl[i]|=lineH[i];
+  const barH=dil(cl,H),own=new Int32Array(NH);R=[null];const stack=new Int32Array(NH);
   for(let start=0;start<NH;start++){if(barH[start]||own[start])continue;
     const id=R.length,r={id,area:0,x0:H,y0:H,x1:0,y1:0,border:false,sx:0,sy:0,run:0};R.push(r);
     let sp=0;stack[sp++]=start;own[start]=id;
@@ -521,6 +523,8 @@ function setupBlank(s){bgId=0;owner=new Int32Array(N).fill(1);isBar=new Uint8Arr
   if(s){lctx.setLineDash([18,16]);lctx.strokeStyle='rgba(124,116,104,.35)';lctx.lineWidth=5;lctx.beginPath();lctx.moveTo(512,20);lctx.lineTo(512,W-20);
     if(s==='k'){lctx.moveTo(20,512);lctx.lineTo(W-20,512);lctx.moveTo(60,60);lctx.lineTo(W-60,W-60);lctx.moveTo(W-60,60);lctx.lineTo(60,W-60)}
     lctx.stroke();lctx.setLineDash([])}}
+function ero(m,w){const o=new Uint8Array(w*w);
+  for(let y=1;y<w-1;y++)for(let x=1;x<w-1;x++){const i=y*w+x;if(m[i]&&m[i-1]&&m[i+1]&&m[i-w]&&m[i+w])o[i]=1}return o}
 function dil(m,w){const o=new Uint8Array(w*w);
   for(let y=0;y<w;y++)for(let x=0;x<w;x++){const i=y*w+x;if(m[i]||(x>0&&m[i-1])||(x<w-1&&m[i+1])||(y>0&&m[i-w])||(y<w-1&&m[i+w]))o[i]=1}return o}
 function dilate(m){const o=new Uint8Array(N);
@@ -622,6 +626,9 @@ function drawStickers(ctx,list){ctx.clearRect(0,0,W,W);ctx.textAlign='center';ct
   for(const s of list){ctx.save();ctx.translate(s.x,s.y);ctx.rotate(s.r);if(s.e.startsWith('my:')){const im=myImg(s.e,()=>drawStickers(ctx,list));if(im.ok){const z=s.s*1.6,k=im.width/im.height;ctx.drawImage(im,-z*Math.min(1,k)/2,-z/Math.max(1,k)/2,z*Math.min(1,k),z/Math.max(1,k))}}
     else if(s.e.startsWith('img:')){const im=stkImg(s.e,()=>drawStickers(ctx,list));if(im.ok){const z=s.s*1.15;ctx.drawImage(im,-z/2,-z/2,z,z)}}
     else{ctx.font=`${s.s}px ${getComputedStyle(document.body).getPropertyValue('--emoji')}`;ctx.fillText(s.e,0,0)}ctx.restore()}}
+/* 붙인 스티커 잡기: 누른 곳에 있는 가장 위 스티커 */
+let drag=null;
+function hitSticker(x,y){for(let i=stickers.length-1;i>=0;i--){const s=stickers[i];if(Math.hypot(s.x-x,s.y-y)<s.s*(s.e.startsWith('my:')?.75:.55))return s}return null}
 function placeSticker(x,y){const base=[75,120,185][sizeIdx];const s={e:stkPick,x,y,r:(Math.random()-.5)*.5,s:base},n=syms().length;
   const mine=[];syms().forEach(T=>{const [px,py]=tx(T,x,y),o={...s,x:px,y:py,r:T[0]*T[3]-T[1]*T[2]<0?-s.r:s.r};mine.push(o);stickers.push(o)});
   const t0=performance.now();(function grow(now){const k=Math.min(1,(now-t0)/260);const sc=k<.7?k/.7*1.25:1.25-(k-.7)/.3*.25;
@@ -634,17 +641,23 @@ let bRect=null;function toXY(e){const b=bRect&&bRect.width?bRect:cvP.getBounding
 let pend=[],rafOn=false;function flush(){rafOn=false;if(!cur){pend=[];return}for(const [x,y] of pend){seg2(cur.x,cur.y,x,y);cur.x=x;cur.y=y}pend=[]}
 let pointerId=null;
 board.addEventListener('pointerdown',e=>{if(!owner||pointerId!==null||celebrating)return;audio();
-  bRect=cvP.getBoundingClientRect();const [x,y]=toXY(e);if(tool==='sticker'||tool==='fill')bRect=null;hideHint();
-  if(tool==='sticker'){pushUndo();placeSticker(x,y);return}
+  bRect=cvP.getBoundingClientRect();const [x,y]=toXY(e);if(tool==='sticker'||tool==='fill'||tool==='wipe')bRect=null;hideHint();
+  if(tool==='sticker'){pushUndo();const hit=hitSticker(x,y);
+    if(hit){drag={s:hit,dx:hit.x-x,dy:hit.y-y};pointerId=e.pointerId;bRect=cvP.getBoundingClientRect();try{board.setPointerCapture(e.pointerId)}catch(_){}hit.s*=1.12;drawStickers(kctx,stickers);tone(620,.08,'triangle',.08);return}
+    placeSticker(x,y);return}
   const id=regionAt(x,y);if(!id)return;pointerId=e.pointerId;try{board.setPointerCapture(e.pointerId)}catch(_){}
   pushUndo();
+  if(tool==='wipe'){pointerId=null;bRect=null;wipeRegion(id);const seen=[id];
+    syms().slice(1).forEach(T=>{const [px,py]=tx(T,x,y),o=regionAt(px,py);if(o&&!seen.includes(o)){seen.push(o);wipeRegion(o)}});return}
   if(tool==='fill'){pointerId=null;noteUse();magicFill(id,x,y);const seen=[id];
     syms().slice(1).forEach(T=>{const [px,py]=tx(T,x,y),o=regionAt(px,py);if(o&&!seen.includes(o)){seen.push(o);magicFill(o,px,py)}});return}
   noteUse();cur={r:id,x,y};mAcc=MAGICS.find(m=>m[0]===magic)[3];mN=0;seg2(x,y,x,y);rub()});
-board.addEventListener('pointermove',e=>{if(!cur||e.pointerId!==pointerId)return;
+board.addEventListener('pointermove',e=>{if(drag&&e.pointerId===pointerId){const [x,y]=toXY(e);drag.s.x=Math.max(0,Math.min(W,x+drag.dx));drag.s.y=Math.max(0,Math.min(W,y+drag.dy));drawStickers(kctx,stickers);return}
+  if(!cur||e.pointerId!==pointerId)return;
   const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];for(const ev of evs.length?evs:[e])pend.push(toXY(ev));
   if(!rafOn){rafOn=true;requestAnimationFrame(flush)}rub()});
-const endStroke=e=>{if(!cur||e.pointerId!==pointerId)return;flush();bRect=null;stopRub();const id=cur.r;cur=null;pointerId=null;
+const endStroke=e=>{if(drag&&e.pointerId===pointerId){drag.s.s/=1.12;drag=null;pointerId=null;bRect=null;drawStickers(kctx,stickers);tone(480,.08,'triangle',.07);afterChange();return}
+  if(!cur||e.pointerId!==pointerId)return;flush();bRect=null;stopRub();const id=cur.r;cur=null;pointerId=null;
   if(R[id].count){const cov=coverage(id);if(cov>=.6){if(!done[id])tone(880,.15,'triangle',.06);done[id]=1}else delete done[id]}
   drewSomething=true;afterChange()};
 board.addEventListener('pointerup',endStroke);board.addEventListener('pointercancel',endStroke);
@@ -659,6 +672,9 @@ function magicFill(id,x,y){if(!id)return;const r=R[id],m=mask(id),maxR=Math.hypo
     pctx.drawImage(scr,m.x,m.y,m.w,m.h,m.x,m.y,m.w,m.h);
     if(k<1)requestAnimationFrame(step);else{fin=true;sparkleAt(r.sx,r.sy,6);drewSomething=true;afterChange()}}step(t0)}
 
+/* 한 칸만 완전히 처음으로 (톡 누른 칸의 색을 모두 지운다) */
+function wipeRegion(id){if(!id)return;const m=mask(id);pctx.globalCompositeOperation='destination-out';pctx.drawImage(m.c,m.x,m.y);pctx.globalCompositeOperation='source-over';
+  delete done[id];oneShot('erase',.8,.4);tone(420,.15,'sine',.08);afterChange()}
 function pushUndo(){const cv=document.createElement('canvas');cv.width=cv.height=W;cv.getContext('2d').drawImage(cvP,0,0);undoStack.push({cv,done:{...done},stk:stickers.map(s=>({...s})),used:JSON.parse(JSON.stringify(used))});if(undoStack.length>10)undoStack.shift()}
 function undo(){const u=undoStack.pop();if(!u){tone(220,.15);return}pctx.clearRect(0,0,W,W);pctx.drawImage(u.cv,0,0);done=u.done;stickers=u.stk;if(u.used)used=u.used;drawStickers(kctx,stickers);tone(330,.18,'sine',.12);afterChange(true)}
 
