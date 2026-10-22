@@ -709,7 +709,8 @@ function afterChange(quiet,initial){const p=progress();
   if(isBlank(pic)){$('nextBtn').textContent='다 그렸어! ⭐';$('nextBtn').hidden=false}
   else if(mode==='story'||mode==='tale'){$('nextBtn').textContent='다 했어! ⭐';$('nextBtn').hidden=false}
   else{$('nextBtn').textContent='다 했어! ⭐';$('nextBtn').hidden=false}
-  if(p>=.85&&!initial)celebrate()}
+  // 완성은 「다 했어!」 단추를 누를 때만 (다운 2026-10-22 — 저절로 완성 없앰)
+}
 async function celebrate(){if(celebrated||celebrating)return;celebrating=true;celebrated=true;$('nextBtn').hidden=true;hideHint();clearTimeout(hintTimer);saveNow();
   fanfare();confetti();
   const st=mode==='story'?STORY[storyIdx]:null,pk=praiseKey();
