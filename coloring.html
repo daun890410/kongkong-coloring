@@ -94,14 +94,24 @@ h2 .link{margin-left:auto;font-size:18px;background:#fff;border-radius:999px;pad
 .stage{grid-area:stage;position:relative;display:flex;align-items:center;justify-content:center;min-height:0}
 .board{position:absolute;inset:0;overflow:hidden;touch-action:none}
 /* 늘어나는 그림판: world = 타일(1024 칸)들을 이어 붙인 큰 도화지 · 확대/이동은 transform 으로 */
-.world{position:absolute;left:0;top:0;transform-origin:0 0;background:#fff;border-radius:44px;box-shadow:0 10px 0 var(--edge);overflow:hidden}
+.world{position:absolute;left:0;top:0;transform-origin:0 0}
+.tsh{position:absolute;width:1024px;height:1024px;box-shadow:0 12px 0 var(--edge),0 0 0 4px var(--edge)}
+.slot-add{position:absolute;width:1024px;height:1024px;box-sizing:border-box;border:16px dashed #ff8fc1;border-radius:70px;background:rgba(255,255,255,.6);display:grid;place-items:center;animation:slotb 1.1s ease-in-out infinite}
+.slot-add img{position:absolute;inset:14%;width:72%;height:72%;object-fit:contain;opacity:.3}
+.slot-add b{position:relative;font-size:340px;line-height:1;color:#ff5fa2;font-weight:normal}
+@keyframes slotb{50%{background:rgba(255,236,246,.85)}}
 .world.glide{transition:transform .35s ease}
-.tile{position:absolute;width:1024px;height:1024px}
+.tile{position:absolute;width:1024px;height:1024px;background:#fff}
 .board canvas{position:absolute;inset:0;width:100%;height:100%}
 .tool svg{width:76%;height:76%;display:block}
+.subtools{position:fixed;z-index:6;display:flex;gap:8px;background:var(--paper);padding:8px;border-radius:22px;box-shadow:0 6px 0 var(--edge),0 6px 22px rgba(0,0,0,.18)}
+.subtools .tool{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:74px;height:78px;padding:6px 2px;font-size:30px}
+.subtools .tool svg{width:38px;height:38px}
+.subtools .tool small{font-family:var(--hand);font-size:13px;line-height:1.1;color:var(--ink);white-space:nowrap}
 .stk-sel{position:absolute;border:3px dashed #ff7eb6;border-radius:50%;box-sizing:border-box;pointer-events:none}
 .stk-sel i{position:absolute;border-radius:50%;background:#fff;box-shadow:0 0 0 3px #ff7eb6,0 3px 6px rgba(0,0,0,.2);display:grid;place-items:center}
 .stk-sel i svg{width:70%;height:70%}
+.stk-sel u{position:absolute;border-radius:50%;background:#ff5f5f;color:#fff;text-decoration:none;display:grid;place-items:center;font-family:var(--display);line-height:1}
 .zoom{position:absolute;left:8px;bottom:8px;display:flex;flex-direction:column;gap:6px;z-index:2}
 .zoom button{width:44px;height:44px;border-radius:50%;background:var(--paper);font-size:24px;box-shadow:0 3px 0 var(--edge);display:grid;place-items:center;font-family:var(--emoji);opacity:.92}
 .card.add{width:min(92vw,620px)}.card.add .pt{font-family:var(--hand);font-size:21px;color:var(--ink);margin:0}
@@ -281,7 +291,7 @@ KKL.set(.08);setTimeout(()=>KKL.set(1),9000);</script>
   </div>
   <div class="stage" id="stage">
     <div class="board loading" id="board">
-      <div class="world" id="world"><canvas id="cvStk" class="stk"></canvas><div class="stk-sel" id="stkSel" hidden><i><svg viewBox="0 0 24 24"><path d="M6 6l12 12M6 6v6M6 6h6M18 18v-6M18 18h-6" fill="none" stroke="#ff4b8b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></i></div><canvas id="cvAnim" class="anim"></canvas></div>
+      <div class="world" id="world"><canvas id="cvStk" class="stk"></canvas><div class="stk-sel" id="stkSel" hidden><i><svg viewBox="0 0 24 24"><path d="M6 6l12 12M6 6v6M6 6h6M18 18v-6M18 18h-6" fill="none" stroke="#ff4b8b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></i><u>✕</u></div><canvas id="cvAnim" class="anim"></canvas></div>
     </div>
     <canvas class="fx" id="fx"></canvas>
     <div class="zoom"><button data-z="in" aria-label="크게 보기">＋</button><button data-z="out" aria-label="작게 보기">－</button><button data-z="fit" aria-label="전체 보기">🖼️</button></div>
@@ -365,7 +375,7 @@ const ICO={
  tostk:'<svg viewBox="0 0 48 48"><path d="M7 7h34v23L30 41H7z" fill="#fff" stroke="#4a4a4a" stroke-width="3" stroke-linejoin="round"/><path d="M41 30H30v11z" fill="#ffd400" stroke="#4a4a4a" stroke-width="3" stroke-linejoin="round"/><path d="m22 10 3.5 7 7.5 1-5.5 5.2 1.4 7.6L22 27.2l-6.9 3.6 1.4-7.6L11 18l7.5-1z" fill="#ff7eb6" stroke="#e0508e" stroke-width="1.5" stroke-linejoin="round"/></svg>',
  reset:'<svg viewBox="0 0 48 48"><path d="M10 5h20l9 9v29H10z" fill="#fff" stroke="#4a4a4a" stroke-width="3" stroke-linejoin="round"/><path d="M30 5v9h9" fill="none" stroke="#4a4a4a" stroke-width="3" stroke-linejoin="round"/><path d="m24 18 2.4 6 6 2.4-6 2.4-2.4 6-2.4-6-6-2.4 6-2.4z" fill="#ffd400" stroke="#e0a514" stroke-width="1.2" stroke-linejoin="round"/><path d="m15 32 1.2 3 3 1.2-3 1.2-1.2 3-1.2-3-3-1.2 3-1.2z" fill="#4cc3ff"/><path d="m33 31 1 2.4 2.4 1-2.4 1-1 2.4-1-2.4-2.4-1 2.4-1z" fill="#ff7eb6"/></svg>',
  eraser:'<svg viewBox="0 0 48 48"><g transform="rotate(-32 24 22)"><rect x="5" y="14" width="38" height="17" rx="4" fill="#ff9ec4" stroke="#4a4a4a" stroke-width="3"/><path d="M27 14v17" stroke="#4a4a4a" stroke-width="3"/><path d="M9 18h15" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".7"/></g><path d="M7 43h12M24 43h6" stroke="#b9b0a4" stroke-width="3" stroke-linecap="round"/></svg>'};
-const TOOLS=[['addpic','➕','그림 더하기'],['brush','🖌️','붓'],['crayon','🖍️','크레용'],['glitter','✨','반짝이'],['magic','🪄','마법 붓'],['fill','🪣','톡 채우기'],['sticker','🌟','스티커'],['eraser',ICO.eraser,'지우개'],['wipe','🧼','칸 지우기'],['undo',ICO.undo,'되돌리기'],['tostk',ICO.tostk,'스티커로 만들기'],['reset',ICO.reset,'이 그림 처음부터']];
+const TOOLS=[['addpic','➕','그림 더하기'],['pan','✋','판 옮기기'],['brush','🖌️','붓'],['crayon','🖍️','크레용'],['glitter','✨','반짝이'],['magic','🪄','마법 붓'],['fill','🪣','톡 채우기'],['sticker','🌟','스티커'],['eraser',ICO.eraser,'지우개'],['wipe','🧼','칸 지우기'],['undo',ICO.undo,'되돌리기'],['tostk',ICO.tostk,'스티커로 만들기'],['reset',ICO.reset,'이 그림 처음부터']];
 const STK_SETS=[['반짝',['⭐','🌟','✨','💖','❤️','🌈','🎀','👑','💎','🫧','🌙','☀️']],
  ['그림',[]],
  ['동물',['🐶','🐱','🐰','🐻','🐼','🦁','🐯','🐸','🐥','🐧','🦄','🐞','🦋','🐝','🐠','🐳','🦖','🐢']],
@@ -503,29 +513,37 @@ function sync(){if(TL){TL.done=done;TL.masks=masks;TL.glowCache=glowCache}}
 function useTile(t){sync();TL=t;if(!t)return;({owner,isBar,R,eligible,bgId,masks,done,sym,glowCache}=t);cvP=t.cvP;cvL=t.cvL;pctx=t.pctx;lctx=t.lctx}
 function grab(t){Object.assign(t,{owner,isBar,R,eligible,bgId,masks,done,sym,glowCache})}
 function newTile(id,col,row){const t={id,col,row,ox:col*W,oy:row*W,owner:null,isBar:null,R:[],eligible:0,bgId:0,masks:new Map(),done:{},sym:'',glowCache:new Map()};
-  t.el=document.createElement('div');t.el.className='tile';t.el.style.left=t.ox+'px';t.el.style.top=t.oy+'px';
+  t.el=document.createElement('div');t.el.className='tile';t.sh=document.createElement('div');t.sh.className='tsh';
   t.cvP=document.createElement('canvas');t.cvL=document.createElement('canvas');t.cvL.className='lines';
   [t.cvP,t.cvL].forEach(c=>{c.width=c.height=W;t.el.appendChild(c)});t.pctx=t.cvP.getContext('2d');t.lctx=t.cvL.getContext('2d');
-  world.insertBefore(t.el,cvS);tiles.push(t);layout();return t}
-function clearTiles(){tiles.forEach(t=>t.el.remove());tiles=[];TL=null}
-function dropTile(t){const n=tiles.indexOf(t);if(n<1)return;t.el.remove();tiles.splice(n,1);if(TL===t){TL=null;useTile(tiles[0])}
-  if(pic)store.del(`pic:${pic}~${n}`);layout();fitView(true)}
+  world.insertBefore(t.sh,world.firstChild);world.insertBefore(t.el,cvS);tiles.push(t);place(t);layout();return t}
+function place(t){t.ox=t.col*W;t.oy=t.row*W;[t.el,t.sh].forEach(e=>{e.style.left=t.ox+'px';e.style.top=t.oy+'px'})}
+function clearTiles(){tiles.forEach(t=>{t.el.remove();t.sh.remove()});tiles=[];TL=null;endPlace()}
+function dropTile(t){const n=tiles.indexOf(t);if(n<1)return;t.el.remove();t.sh.remove();tiles.splice(n,1);if(TL===t){TL=null;useTile(tiles[0])}
+  if(pic)store.del(`pic:${pic}~${n}`);normalize();layout();fitView(true)}
+/* 왼쪽 · 위에 붙이면 칸 번호가 음수가 된다 → 판 전체를 밀어 가장 왼쪽 위가 (0,0) 이 되게 (스티커 · 되돌리기 속 스티커도 같이) */
+function normalize(){const dc=-Math.min(...tiles.map(t=>t.col)),dr=-Math.min(...tiles.map(t=>t.row));if(!dc&&!dr)return;
+  tiles.forEach(t=>{t.col+=dc;t.row+=dr;place(t)});const mv=s=>{s.x+=dc*W;s.y+=dr*W};stickers.forEach(mv);undoStack.forEach(u=>u.stk.forEach(mv));
+  VIEW.x-=dc*W*VIEW.s;VIEW.y-=dr*W*VIEW.s}
 const tileAt=(x,y)=>tiles.find(t=>x>=t.ox&&y>=t.oy&&x<t.ox+W&&y<t.oy+W);
 const worldW=()=>Math.max(1,...tiles.map(t=>t.col+1))*W,worldH=()=>Math.max(1,...tiles.map(t=>t.row+1))*W;
+/* 보이는 범위 = 타일들 (+ 붙일 자리를 고르는 중이면 ➕ 자리까지) */
+function bounds(){const cs=[...tiles.map(t=>[t.col,t.row]),...(placing?placing.slots:[])];if(!cs.length)return{x0:0,y0:0,w:W,h:W};
+  const x0=Math.min(...cs.map(c=>c[0]))*W,y0=Math.min(...cs.map(c=>c[1]))*W;return{x0,y0,w:(Math.max(...cs.map(c=>c[0]))+1)*W-x0,h:(Math.max(...cs.map(c=>c[1]))+1)*W-y0}}
 function layout(){const ww=worldW(),wh=worldH();world.style.width=ww+'px';world.style.height=wh+'px';
   if(cvS.width!==ww||cvS.height!==wh){cvS.width=ww;cvS.height=wh;drawStickers(kctx,stickers)}
   const k=Math.min(1,1600/Math.max(ww,wh)),aw=Math.round(ww*k),ah=Math.round(wh*k);if(cvA.width!==aw||cvA.height!==ah){cvA.width=aw;cvA.height=ah}}
 /* 보기: 처음엔 판 전체가 화면에 들어오게 · 두 손가락 = 확대/축소/이동 · 한 손가락은 늘 칠하기 */
 const VIEW={x:0,y:0,s:1,auto:true};let glideT;
 function applyView(){world.style.transform=`translate(${VIEW.x}px,${VIEW.y}px) scale(${VIEW.s})`;updateSel()}
-function fitScale(){const b=board.getBoundingClientRect();return Math.min(b.width/worldW(),b.height/worldH())*.98}
+function fitScale(){const b=board.getBoundingClientRect(),B=bounds();return Math.min(b.width/B.w,b.height/B.h)*.98}
 function glide(on){if(!on)return;world.classList.add('glide');clearTimeout(glideT);glideT=setTimeout(()=>world.classList.remove('glide'),400)}
-function fitView(g){const b=board.getBoundingClientRect();if(!b.width)return;const s=fitScale();
-  VIEW.s=s;VIEW.x=(b.width-worldW()*s)/2;VIEW.y=(b.height-worldH()*s)/2;VIEW.auto=true;glide(g);applyView()}
-function clampView(){const b=board.getBoundingClientRect(),fs=fitScale();VIEW.s=Math.max(fs,Math.min(Math.max(fs,2),VIEW.s));
-  const ww=worldW()*VIEW.s,wh=worldH()*VIEW.s,m=60;
-  VIEW.x=ww<=b.width?(b.width-ww)/2:Math.min(m,Math.max(b.width-ww-m,VIEW.x));
-  VIEW.y=wh<=b.height?(b.height-wh)/2:Math.min(m,Math.max(b.height-wh-m,VIEW.y))}
+function fitView(g){const b=board.getBoundingClientRect();if(!b.width)return;const s=fitScale(),B=bounds();
+  VIEW.s=s;VIEW.x=(b.width-B.w*s)/2-B.x0*s;VIEW.y=(b.height-B.h*s)/2-B.y0*s;VIEW.auto=true;glide(g);applyView()}
+function clampView(){const b=board.getBoundingClientRect(),fs=fitScale(),B=bounds();VIEW.s=Math.max(fs,Math.min(Math.max(fs,2),VIEW.s));
+  const ww=B.w*VIEW.s,wh=B.h*VIEW.s,m=60,ox=B.x0*VIEW.s,oy=B.y0*VIEW.s;
+  VIEW.x=ww<=b.width?(b.width-ww)/2-ox:Math.min(m-ox,Math.max(b.width-ww-m-ox,VIEW.x));
+  VIEW.y=wh<=b.height?(b.height-wh)/2-oy:Math.min(m-oy,Math.max(b.height-wh-m-oy,VIEW.y))}
 const clampS=s=>{const fs=fitScale();return Math.max(fs,Math.min(Math.max(fs,2),s))};
 function zoomAt(f,cx,cy,g){const s0=VIEW.s;VIEW.s=clampS(s0*f);const k=VIEW.s/s0;
   VIEW.x=cx-(cx-VIEW.x)*k;VIEW.y=cy-(cy-VIEW.y)*k;VIEW.auto=false;clampView();glide(g);applyView()}
@@ -694,7 +712,9 @@ let selStk=null;const selR=s=>s.s*(s.e.startsWith('my:')?.75:.6),hSize=()=>40/VI
 function updateSel(){const el=$('stkSel'),s=selStk;if(!el)return;if(tool!=='sticker'||!s||!stickers.includes(s)){el.hidden=true;return}
   const r=selR(s),h=hSize(),hd=el.firstChild;el.hidden=false;
   Object.assign(el.style,{left:s.x-r+'px',top:s.y-r+'px',width:2*r+'px',height:2*r+'px',borderWidth:3/VIEW.s+'px'});
-  Object.assign(hd.style,{width:h+'px',height:h+'px',left:r+r*.707-h/2+'px',top:r+r*.707-h/2+'px',boxShadow:`0 0 0 ${3/VIEW.s}px #ff7eb6`})}
+  Object.assign(hd.style,{width:h+'px',height:h+'px',left:r+r*.707-h/2+'px',top:r+r*.707-h/2+'px',boxShadow:`0 0 0 ${3/VIEW.s}px #ff7eb6`});
+  Object.assign(el.children[1].style,{width:h+'px',height:h+'px',left:r+r*.707-h/2+'px',top:r-r*.707-h/2+'px',fontSize:h*.6+'px',boxShadow:`0 0 0 ${3/VIEW.s}px #fff`})}
+function hitX(x,y){const s=selStk;if(tool!=='sticker'||!s||!stickers.includes(s))return false;const r=selR(s);return Math.hypot(x-s.x-r*.707,y-s.y+r*.707)<hSize()*.8}
 function hitHandle(x,y){const s=selStk;if(tool!=='sticker'||!s||!stickers.includes(s))return false;const r=selR(s);return Math.hypot(x-s.x-r*.707,y-s.y-r*.707)<hSize()*.8}
 function drawStickers(ctx,list){if(ctx===kctx)updateSel();ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);ctx.textAlign='center';ctx.textBaseline='middle';
   for(const s of list){ctx.save();ctx.translate(s.x,s.y);ctx.rotate(s.r);if(s.e.startsWith('my:')){const im=myImg(s.e,()=>drawStickers(ctx,list));if(im.ok){const z=s.s*1.6,k=im.width/im.height;ctx.drawImage(im,-z*Math.min(1,k)/2,-z/Math.max(1,k)/2,z*Math.min(1,k),z/Math.max(1,k))}}
@@ -719,10 +739,10 @@ let vRect=null;function toXY(e){const b=vRect||board.getBoundingClientRect();ret
 let pend=[],rafOn=false;function flush(){rafOn=false;if(!cur){pend=[];return}for(const [x,y] of pend){seg2(cur.x,cur.y,x,y);cur.x=x;cur.y=y}pend=[]}
 let pointerId=null;
 /* 두 손가락: 확대 · 축소 · 이동. 두 번째 손가락이 닿으면 첫 손가락이 막 칠한 것은 조용히 되돌린다 */
-const ptrs=new Map();let pinch=null,hold=false,downAt=0,downMark=-1;
+const ptrs=new Map();let panS=null,pinch=null,hold=false,downAt=0,downMark=-1;
 function cancelTouch(){const fresh=performance.now()-downAt<400;
   if((cur||drag||fresh)&&undoStack.length===downMark)undo(true);
-  if(cur)stopRub(true);cur=null;drag=null;pend=[];pointerId=null;vRect=null;downMark=-1;hold=true;hideHint()}
+  if(cur)stopRub(true);cur=null;drag=null;panS=null;pend=[];pointerId=null;vRect=null;downMark=-1;hold=true;hideHint()}
 function pinchStart(){const [a,b]=[...ptrs.values()],r=board.getBoundingClientRect();
   pinch={r,d:Math.hypot(a.x-b.x,a.y-b.y)||1,mx:(a.x+b.x)/2-r.left,my:(a.y+b.y)/2-r.top,s:VIEW.s,vx:VIEW.x,vy:VIEW.y}}
 function pinchMove(){const [a,b]=[...ptrs.values()],p=pinch,d=Math.hypot(a.x-b.x,a.y-b.y)||1,mx=(a.x+b.x)/2-p.r.left,my=(a.y+b.y)/2-p.r.top;
@@ -730,8 +750,12 @@ function pinchMove(){const [a,b]=[...ptrs.values()],p=pinch,d=Math.hypot(a.x-b.x
 board.addEventListener('pointerdown',e=>{ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size>=2){cancelTouch();if(ptrs.size===2)pinchStart();return}
   if(hold||!TL||pointerId!==null||celebrating)return;audio();
+  if(placing){const [x,y]=toXY(e),c=Math.floor(x/W),r=Math.floor(y/W),id=placing.id,ok=placing.slots.some(s=>s[0]===c&&s[1]===r);endPlace();
+    if(ok)addPic(id,c,r);else{setBubble('붙이기를 그만했어요.');fitView(true)}return}
+  if(tool==='pan'){pointerId=e.pointerId;panS={x:e.clientX,y:e.clientY,vx:VIEW.x,vy:VIEW.y};try{board.setPointerCapture(e.pointerId)}catch(_){}return}
   vRect=board.getBoundingClientRect();const [x,y]=toXY(e);hideHint();downAt=performance.now();
   if(tool==='sticker'){if(x<0||y<0||x>worldW()||y>worldH()){vRect=null;return}pushUndo([]);downMark=undoStack.length;const hit=hitSticker(x,y);
+    if(hitX(x,y)){vRect=null;const s=selStk;selStk=null;removeSticker(s);return}
     if(hitHandle(x,y)){const s=selStk;drag={s,rs:true,base:s.s,d0:Math.max(20,Math.hypot(x-s.x,y-s.y))};pointerId=e.pointerId;try{board.setPointerCapture(e.pointerId)}catch(_){}tone(620,.08,'triangle',.08);return}
     if(hit){selStk=hit;drag={s:hit,dx:hit.x-x,dy:hit.y-y};pointerId=e.pointerId;try{board.setPointerCapture(e.pointerId)}catch(_){}hit.s*=1.12;drawStickers(kctx,stickers);tone(620,.08,'triangle',.08);return}
     vRect=null;placeSticker(x,y);return}
@@ -746,11 +770,13 @@ board.addEventListener('pointerdown',e=>{ptrs.set(e.pointerId,{x:e.clientX,y:e.c
   noteUse();cur={r:id,x:lx,y:ly,t};mAcc=MAGICS.find(m=>m[0]===magic)[3];mN=0;seg2(lx,ly,lx,ly);rub()});
 board.addEventListener('pointermove',e=>{if(ptrs.has(e.pointerId))ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pinch){if(ptrs.size>=2)pinchMove();return}
+  if(panS&&e.pointerId===pointerId){VIEW.x=panS.vx+e.clientX-panS.x;VIEW.y=panS.vy+e.clientY-panS.y;VIEW.auto=false;clampView();applyView();return}
   if(drag&&e.pointerId===pointerId){const [x,y]=toXY(e);if(drag.rs){drag.s.s=Math.max(40,Math.min(700,drag.base*Math.hypot(x-drag.s.x,y-drag.s.y)/drag.d0));drawStickers(kctx,stickers);return}drag.s.x=Math.max(0,Math.min(worldW(),x+drag.dx));drag.s.y=Math.max(0,Math.min(worldH(),y+drag.dy));drawStickers(kctx,stickers);return}
   if(!cur||e.pointerId!==pointerId)return;
   const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];for(const ev of evs.length?evs:[e]){const [x,y]=toXY(ev);pend.push([x-cur.t.ox,y-cur.t.oy]);if(tool==='eraser'){const h=hitSticker(x,y);if(h)removeSticker(h)}}
   if(!rafOn){rafOn=true;requestAnimationFrame(flush)}rub()});
 const endStroke=e=>{ptrs.delete(e.pointerId);if(pinch&&ptrs.size<2)pinch=null;if(!ptrs.size)hold=false;
+  if(panS&&e.pointerId===pointerId){panS=null;pointerId=null;return}
   if(drag&&e.pointerId===pointerId){if(!drag.rs)drag.s.s/=1.12;drag=null;pointerId=null;vRect=null;drawStickers(kctx,stickers);tone(480,.08,'triangle',.07);afterChange();return}
   if(!cur||e.pointerId!==pointerId)return;flush();vRect=null;stopRub();const id=cur.r;cur=null;pointerId=null;
   if(R[id].count){const cov=coverage(id);if(cov>=.6){if(!done[id])tone(880,.15,'triangle',.06);done[id]=1}else delete done[id]}
@@ -779,7 +805,7 @@ function pushUndo(ts,add){sync();ts=ts||[TL];
   undoStack.push({add,ts:ts.map(t=>{t.dirty=true;const cv=document.createElement('canvas');cv.width=cv.height=W;cv.getContext('2d').drawImage(t.cvP,0,0);return{t,cv,done:{...t.done}}}),
     stk:stickers.map(s=>({...s})),used:JSON.parse(JSON.stringify(used))});if(undoStack.length>6)undoStack.shift()}
 function undo(quiet){const u=undoStack.pop();if(!u){if(!quiet)tone(220,.15);return}fills.forEach(f=>f());fills.clear();
-  if(u.add)dropTile(u.add);
+  stickers=u.stk;if(u.add)dropTile(u.add);
   u.ts.forEach(({t,cv,done:d})=>{if(!tiles.includes(t))return;t.pctx.clearRect(0,0,W,W);t.pctx.drawImage(cv,0,0);t.done=d;t.dirty=true;if(t===TL)done=d});
   stickers=u.stk;if(u.used)used=u.used;drawStickers(kctx,stickers);if(!quiet)tone(330,.18,'sine',.12);afterChange(true)}
 
@@ -853,7 +879,7 @@ function setBubble(text,tip){$('bubble').innerHTML=text+(tip?`<span class="tip">
 
 function openPic(id,m,idx){store.set('last',m==='story'?'story':m==='tale'?'tale':'free');mode=m;storyIdx=idx||0;pic=id;undoStack=[];stickers=[];used={c:[],pt:false,rb:false};celebrated=false;celebrating=false;drewSomething=false;
   $('award').hidden=true;$('addPick').hidden=true;selStk=null;const tok=++openTok;
-  clearTiles();kctx.clearRect(0,0,cvS.width,cvS.height);const t0=newTile(id,0,0);t0.sym=id==='mirror'?'m':id==='kaleido'?'k':'';useTile(t0);
+  clearTiles();kctx.clearRect(0,0,cvS.width,cvS.height);const sc0=store.get('scene:'+id),p0=sc0&&sc0.tiles&&sc0.tiles[0]||{col:0,row:0};const t0=newTile(id,p0.col,p0.row);t0.sym=id==='mirror'?'m':id==='kaleido'?'k':'';useTile(t0);
   board.classList.add('loading');$('nextBtn').hidden=true;
   const st=m==='story'?STORY[storyIdx]:null;
   if(m==='tale'){const pg=TALES[taleIdx].pages[pageIdx];setBubble(pg.tell,'“다음엔 어떻게 될까?” 하고 물어봐 주세요.');speak([`tale_${id}_tell`],300)}
@@ -889,9 +915,20 @@ function renderAdd(){const cats=[...CATS,{id:'draw',name:'하얀 도화지',emoj
     b.onclick=()=>{addCat=c.id;renderAdd();tone(650,.08,'triangle',.08)};tb.appendChild(b)});
   const g=$('addGrid');g.innerHTML='';g.scrollTop=0;cur.items.forEach(([id,name])=>{const b=document.createElement('button');b.setAttribute('aria-label',name);
     b.innerHTML=(isBlank(id)?`<span class="big">${BLANK[id][1]}</span>`:`<img src="${src(id)}" alt="" loading="lazy">`)+`<span>${name}</span>`;
-    const im=b.querySelector('img');if(im)im.onerror=()=>b.remove();b.onclick=()=>{audio();$('addPick').hidden=true;addPic(id)};g.appendChild(b)})}
-function addPic(id){if(!TL||tiles.length>=MAXT)return;const n=tiles.length,t=newTile(id,n%COLS,(n/COLS)|0);
-  pushUndo([],t);t.dirty=true;fitView(true);oneShot('sparkle',.8);
+    const im=b.querySelector('img');if(im)im.onerror=()=>b.remove();b.onclick=()=>{audio();$('addPick').hidden=true;startPlace(id)};g.appendChild(b)})}
+/* 붙일 자리 고르기 (다운 2026-10-22 「원하는 방향으로」): 판 위 · 아래 · 왼쪽 · 오른쪽 빈자리마다 ➕ → 톡 누른 자리에 붙는다 · 다른 데를 누르면 그만 */
+let placing=null;const MAXSPAN=4;
+function startPlace(id){endPlace();const occ=new Set(tiles.map(t=>t.col+','+t.row)),slots=[],seen=new Set();
+  const c0=Math.min(...tiles.map(t=>t.col)),c1=Math.max(...tiles.map(t=>t.col)),r0=Math.min(...tiles.map(t=>t.row)),r1=Math.max(...tiles.map(t=>t.row));
+  tiles.forEach(t=>[[1,0],[-1,0],[0,1],[0,-1]].forEach(([a,b])=>{const c=t.col+a,r=t.row+b,k=c+','+r;if(occ.has(k)||seen.has(k))return;seen.add(k);
+    if(Math.max(c1,c)-Math.min(c0,c)+1>MAXSPAN||Math.max(r1,r)-Math.min(r0,r)+1>MAXSPAN)return;slots.push([c,r])}));
+  if(!slots.length){setBubble('그림판이 꽉 찼어요!');tone(220,.2);return}
+  placing={id,slots,els:slots.map(([c,r])=>{const e=document.createElement('div');e.className='slot-add';e.style.left=c*W+'px';e.style.top=r*W+'px';
+    e.innerHTML=(isBlank(id)?'':`<img src="${src(id)}" alt="">`)+'<b>＋</b>';world.appendChild(e);return e})};
+  setBubble(`<b>${nameOf(id)||'그림'}</b> 그림을 어디에 붙일까요? 반짝이는 <b>＋</b> 를 톡 눌러요.`);fitView(true);oneShot('sparkle',.6,.5)}
+function endPlace(){if(!placing)return;placing.els.forEach(e=>e.remove());placing=null}
+function addPic(id,col,row){if(!TL||tiles.length>=MAXT)return;const n=tiles.length;if(col==null){col=n%COLS;row=(n/COLS)|0}
+  pushUndo([]);const t=newTile(id,col,row);undoStack[undoStack.length-1].add=t;normalize();layout();t.dirty=true;fitView(true);oneShot('sparkle',.8);
   setBubble(`<b>${nameOf(id)||'그림'}</b> 그림을 옆에 붙였어요!`,'두 손가락으로 벌리면 크게, 오므리면 작게 보여요. 두 손가락으로 끌면 움직여요.');
   loadTile(t,null,openTok,ok=>{if(!ok){dropTile(t);undoStack=undoStack.filter(u=>u.add!==t);return}sparkleAt(t.ox+W/2,t.oy+W/2,12);afterChange()})}
 $('addClose').onclick=()=>{$('addPick').hidden=true};
@@ -899,7 +936,7 @@ $('addClose').onclick=()=>{$('addPick').hidden=true};
 function saveNow(){if(!pic||!tiles.length||!tiles[0].owner)return;clearTimeout(saveTimer);sync();
   const url=t=>{if(t.dirty||!t.url){t.url=t.cvP.toDataURL('image/webp',.8);t.dirty=false}return t.url},t0=tiles[0],one=tiles.length===1;
   // 첫 타일 'pic:' 의 k = 첫 타일 자리만 오린 스티커 (첫 화면 · 그림책 작은 그림이 예전처럼 보이게)
-  let k='';if(stickers.length){if(one)k=cvS.toDataURL('image/webp',.8);else{const c=document.createElement('canvas');c.width=c.height=W;c.getContext('2d').drawImage(cvS,0,0);k=c.toDataURL('image/webp',.8)}}
+  let k='';if(stickers.length){if(one)k=cvS.toDataURL('image/webp',.8);else{const c=document.createElement('canvas');c.width=c.height=W;c.getContext('2d').drawImage(cvS,-t0.ox,-t0.oy);k=c.toDataURL('image/webp',.8)}}
   store.set('pic:'+pic,{p:url(t0),k,s:stickers,d:t0.done,u:used});
   if(one){store.del('scene:'+pic);return}
   tiles.slice(1).forEach((t,n)=>{if(t.owner&&(t.dirty||!t.url))store.set(`pic:${pic}~${n+1}`,{p:url(t),d:t.done})});
@@ -938,15 +975,33 @@ $('goHome').onclick=()=>{hush();if(pic)saveNow();pic=null;openTok++;clearTiles()
 $('sayAgain').onclick=()=>{audio();if(lastKeys.length)speak(lastKeys)};
 
 /* 도구 · 크레용 · 무늬 · 스티커 */
-function setTool(k){tool=k;updateSel();document.querySelectorAll('#tools .tool[data-k]').forEach(t=>t.setAttribute('aria-pressed',t.dataset.k===k));
+function setTool(k){tool=k;updateSel();drawGroups();
   const stk=k==='sticker';$('stickers').hidden=!stk;$('colors').hidden=stk;$('patterns').hidden=stk||k==='magic';$('magics').hidden=k!=='magic'}
 MAGICS.forEach(([k,ico,name],i)=>{const b=document.createElement('button');b.className='mg';b.textContent=ico;b.setAttribute('aria-label',name);
   b.setAttribute('aria-pressed',k===magic);b.onclick=()=>{audio();magic=k;document.querySelectorAll('.mg').forEach(x=>x.setAttribute('aria-pressed',x===b));
     tone(560+i*70,.15,'triangle',.1)};$('magics').appendChild(b)});
-TOOLS.forEach(([k,ico,name])=>{const b=document.createElement('button');b.className='tool';if(ico.startsWith('<svg'))b.innerHTML=ico;else b.textContent=ico;b.setAttribute('aria-label',name);
-  if(k!=='undo'&&k!=='reset'&&k!=='tostk'&&k!=='addpic'){b.dataset.k=k;b.setAttribute('aria-pressed',k===tool)}
-  b.onclick=()=>{audio();if(k==='addpic'){openAdd();oneShot('sparkle',.5,.5);return}if(k==='undo'){undo();return}if(k==='reset'){resetPic();return}if(k==='tostk'){makeMySticker();return}setTool(k);
-    if(k==='fill'||k==='sticker')oneShot('sparkle',.6,.7);else oneShot(rubKind(),.8,.4)};$('tools').appendChild(b)});
+/* 도구 줄 묶음 (다운 2026-10-22 「펜끼리 뭉치고 지우개끼리 뭉치고 · 두 번 눌러도 되니까」):
+   묶음을 누르면 마지막에 쓰던 도구로 바로 바뀌고, 옆에 그 묶음 도구들이 펼쳐진다 → 하나를 톡 */
+var GROUPS=[{k:'board',ico:'🧩',name:'그림판',items:['addpic','pan']},{k:'pen',name:'펜',items:['brush','crayon','glitter','magic','fill']},
+  {k:'stk',name:'스티커',items:['sticker','tostk']},{k:'erase',name:'지우개',items:['eraser','wipe','reset']},{k:'undo',items:['undo']}];
+const TDEF=Object.fromEntries(TOOLS.map(([k,ico,name])=>[k,{ico,name}])),STATE=new Set(['brush','crayon','glitter','magic','fill','sticker','eraser','wipe','pan']);
+const lastIn={pen:'brush',stk:'sticker',erase:'eraser'};let subFor=null;
+function runTool(k){audio();closeSub();if(k==='addpic'){openAdd();oneShot('sparkle',.5,.5);return}if(k==='undo'){undo();return}if(k==='reset'){resetPic();return}if(k==='tostk'){makeMySticker();return}
+  setTool(k);if(k==='pan'){tone(500,.1,'triangle',.08);return}if(k==='fill'||k==='sticker')oneShot('sparkle',.6,.7);else oneShot(rubKind(),.8,.4)}
+function drawGroups(){if(!GROUPS[0].btn)return;GROUPS.forEach(g=>{const on=g.items.includes(tool);if(on&&g.k in lastIn)lastIn[g.k]=tool;
+  g.btn.innerHTML=TDEF[g.k in lastIn?lastIn[g.k]:g.items[0]]&&!g.ico?TDEF[g.k in lastIn?lastIn[g.k]:g.items[0]].ico:g.ico;g.btn.setAttribute('aria-pressed',on)})}
+function openSub(g){closeSub();subFor=g;const p=document.createElement('div');p.className='subtools';p.id='subTools';
+  g.items.forEach(k=>{const d=TDEF[k],b=document.createElement('button');b.className='tool';b.innerHTML=d.ico+`<small>${d.name}</small>`;b.setAttribute('aria-label',d.name);
+    if(STATE.has(k))b.setAttribute('aria-pressed',tool===k);b.onclick=()=>runTool(k);p.appendChild(b)});
+  document.body.appendChild(p);const r=g.btn.getBoundingClientRect(),q=p.getBoundingClientRect(),col=getComputedStyle($('tools')).flexDirection==='column';
+  const x=col?r.right+10:r.left+r.width/2-q.width/2,y=col?r.top+r.height/2-q.height/2:r.top-q.height-10;
+  p.style.left=Math.max(8,Math.min(innerWidth-q.width-8,x))+'px';p.style.top=Math.max(8,Math.min(innerHeight-q.height-8,y))+'px';tone(600,.08,'triangle',.07)}
+function closeSub(){const p=$('subTools');if(p)p.remove();subFor=null}
+document.addEventListener('pointerdown',e=>{if(subFor&&!e.target.closest('#subTools')&&!e.target.closest('#tools'))closeSub()},true);
+GROUPS.forEach(g=>{const b=document.createElement('button');b.className='tool';b.setAttribute('aria-label',g.name||TDEF[g.items[0]].name);g.btn=b;
+  b.onclick=()=>{if(g.items.length===1){runTool(g.items[0]);return}audio();if(subFor===g){closeSub();return}
+    const pick=lastIn[g.k];if(pick&&tool!==pick)runTool(pick);openSub(g)};$('tools').appendChild(b)});
+drawGroups();
 function selectColor(c,b,i){audio();color=c;if(tool==='eraser')setTool('brush');
   document.querySelectorAll('.crayon').forEach(x=>x.setAttribute('aria-pressed',x===b));tone(440+(i||0)*45,.15,'sine',.1);
   if(pattern==='rainbow'){pattern='none';document.querySelectorAll('.pat').forEach((x,j)=>x.setAttribute('aria-pressed',j===0))}drawPatButtons()}
