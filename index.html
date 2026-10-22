@@ -203,10 +203,27 @@ h2[id]{scroll-margin-top:62px}
   .tale{border-radius:16px}.tale .t{font-size:13px;padding:4px 6px 0}.tale .dots{padding:2px 6px 6px;gap:3px}.tale .dots i{width:7px;height:7px}
   .tale .badge{font-size:18px}
 }
+#splash{position:fixed;inset:0;z-index:60;background:var(--sky);display:grid;place-items:center;transition:opacity .4s}
+.sp-in{display:flex;flex-direction:column;align-items:center;gap:18px;width:min(84vw,560px)}
+.sp-track{position:relative;width:100%;height:96px;border-bottom:6px dashed #9fd3c7}
+.sp-run{position:absolute;left:0;bottom:2px;width:80px;height:80px;transition:left .45s ease-out}
+.sp-run span{display:block;font-size:70px;line-height:80px;font-family:var(--emoji);transform:scaleX(-1);animation:gallop .32s ease-in-out infinite}
+.sp-goal{position:absolute;right:-6px;bottom:4px;font-size:44px;font-family:var(--emoji)}
+.sp-t{margin:0;font-family:var(--display);font-size:22px;color:var(--ink);font-variant-numeric:tabular-nums}
+@keyframes gallop{0%,100%{transform:scaleX(-1) translateY(0) rotate(0)}50%{transform:scaleX(-1) translateY(-14px) rotate(-6deg)}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 @media (max-width:420px){.tool{width:50px;height:50px;font-size:25px}.round{width:48px;height:48px}.colors{gap:6px}}
 </style>
 
+<div id="splash"><div class="sp-in">
+  <div class="sp-track"><span class="sp-run" id="spRun"><span>🐆</span></span><span class="sp-goal">🏁</span></div>
+  <p class="sp-t" id="spTxt">콩콩 색칠놀이 준비 중… 0%</p></div></div>
+<script>/* 로딩 화면: 준비된 만큼 치타가 달려간다 */
+window.KKL={p:0,set(v){v=Math.max(this.p,Math.min(1,v));this.p=v;const r=document.getElementById('spRun'),t=document.getElementById('spTxt');
+  if(r)r.style.left='calc('+(v*100)+'% - '+(v*80)+'px)';if(t)t.textContent=v>=1?'준비 끝! 출발!':'콩콩 색칠놀이 준비 중… '+Math.round(v*100)+'%';if(v>=1)this.done()},
+  step(n){this.set(this.p+(n||.17))},
+  done(){const s=document.getElementById('splash');if(!s||s.dataset.d)return;s.dataset.d=1;setTimeout(()=>{s.style.opacity=0;setTimeout(()=>s.remove(),450)},400)}};
+KKL.set(.08);setTimeout(()=>KKL.set(1),9000);</script>
 <section id="who" class="screen" hidden>
   <div class="cover"><div><h1>누가 색칠할까요?</h1><p>아이마다 칠한 그림과 이야기가 따로 저장돼요.</p></div></div>
   <div class="kids" id="kids"></div>
@@ -359,8 +376,8 @@ function makeMySticker(){if(!owner||celebrating)return;
   setBubble('<b>내 그림 스티커</b>가 생겼어요! 🌟 이제 아무 그림에나 톡 붙여 봐요.');oneShot('sparkle',.9);sparkleAt(512,512,14)}
 const src=id=>`img/${id}.png`;
 let CATS=[],FLAGTIP={},curCat=null;
-fetch('tales/cats.json').then(r=>r.json()).then(j=>{CATS=j.cats;FREE=CATS.flatMap(c=>c.items);FLAGTIP=j.flagTip||{};if(!$('home').hidden)renderHome()}).catch(()=>{});
-let TALES=[];fetch('tales/tales.json').then(r=>r.json()).then(j=>{TALES=j.tales;if(!$('home').hidden)renderHome()}).catch(()=>{});
+fetch('tales/cats.json').then(r=>r.json()).then(j=>{KKL.step();CATS=j.cats;FREE=CATS.flatMap(c=>c.items);FLAGTIP=j.flagTip||{};if(!$('home').hidden)renderHome()}).catch(()=>{});
+let TALES=[];fetch('tales/tales.json').then(r=>r.json()).then(j=>{KKL.step();TALES=j.tales;if(!$('home').hidden)renderHome()}).catch(()=>{});
 let taleIdx=0,pageIdx=0;
 const taleOf=id=>{const m=/^(t\d\d)_(\d)$/.exec(id);return m?{t:TALES.findIndex(x=>x.id===m[1]),p:+m[2]-1}:null};
 const taleIds=()=>TALES.flatMap(t=>t.pages.map((_,i)=>`${t.id}_${i+1}`));
@@ -907,6 +924,10 @@ function fsToggle(){const d=document,el=d.documentElement;try{if(d.fullscreenEle
 document.querySelectorAll('.fsBtn').forEach(b=>b.onclick=e=>{e.stopPropagation();audio();fsToggle()});
 const fsOK=!!(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen)&&!matchMedia('(display-mode: fullscreen)').matches;
 document.querySelectorAll('.fsBtn').forEach(b=>b.hidden=!fsOK);
+try{document.fonts.ready.then(()=>KKL.step())}catch(e){KKL.step()}
+setTimeout(()=>{KKL.step(.12);const ims=[...document.querySelectorAll('section:not([hidden]) img')].slice(0,12);
+  Promise.all(ims.map(i=>i.complete?1:new Promise(r=>{i.addEventListener('load',r,{once:true});i.addEventListener('error',r,{once:true})})))
+    .then(()=>setTimeout(()=>KKL.set(1),250))},300);
 (function boot(){const list=profiles();if(!list.length||!me()){renderWho();return}if(list.length>1){renderWho();return}pickKid(PID)})();
 </script>
 
