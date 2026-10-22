@@ -48,6 +48,7 @@ h2 .link{margin-left:auto;font-size:18px;background:#fff;border-radius:999px;pad
 .thumb .big{position:absolute;inset:0;display:grid;place-items:center;font-size:44px;font-family:var(--emoji)}
 .thumb .name{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:14px;color:var(--mute)}
 .thumb.lock{filter:grayscale(1);opacity:.45}
+.thumb.cat img{inset:5% 9% 24%;width:82%;height:71%}
 .thumb.cat{background:#fff}.thumb.cat .big{font-size:52px;padding-bottom:18px}.thumb.cat .name{font-size:17px;color:var(--ink)}
 .thumb.back{background:var(--sun)}.thumb.back .big{font-size:40px}
 .more{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
@@ -436,6 +437,7 @@ function makeMySticker(){if(!owner||celebrating)return;
   setBubble('<b>내 그림 스티커</b>가 생겼어요! 🌟 이제 아무 그림에나 톡 붙여 봐요.');oneShot('sparkle',.9);sparkleAt(TL.ox+512,TL.oy+512,14)}
 const src=id=>`img/${id}.png`;
 let CATS=[],FLAGTIP={},curCat=null;
+const coverOf=c=>c.cover||(c.sub?coverOf(c.sub[0]):((c.items||[]).find(([id])=>!isBlank(id))||[])[0]);   // 대표 그림: cats.json 의 cover, 없으면 첫 그림
 const LEAF=()=>CATS.flatMap(c=>c.sub||[c]);   // 큰 카테고리(캐릭터)는 sub 안에 작은 카테고리를 가진다
 fetch('tales/cats.json',{cache:'no-cache'}).then(r=>r.json()).then(j=>{KKL.step();CATS=j.cats;FREE=LEAF().flatMap(c=>c.items);FLAGTIP=j.flagTip||{};if(!$('home').hidden)renderHome()}).catch(()=>{});
 let TALES=[];fetch('tales/tales.json',{cache:'no-cache'}).then(r=>r.json()).then(j=>{KKL.step();TALES=j.tales;if(!$('home').hidden)renderHome()}).catch(()=>{});
@@ -1147,7 +1149,9 @@ var renderHome=function(){const prog=store.get('story')||0,fr=store.get('friends
   const cats=[{id:'draw',name:'그리기 놀이',emoji:'🖍️',items:Object.keys(BLANK).map(k=>[k,BLANK[k][0]])},...CATS];
   const up=cats.find(c=>(c.sub||[]).some(s=>s.id===curCat)),cur=cats.find(c=>c.id===curCat)||(up&&up.sub.find(s=>s.id===curCat));
   const catBtns=list=>list.forEach(c=>{const b=document.createElement('button');b.className='thumb cat';b.setAttribute('aria-label',c.name);
-      b.innerHTML=`<span class="big">${c.emoji}</span><span class="name">${c.name}</span>`;
+      // 칸 겉그림 = 그 칸 안의 그림 하나 (다운 2026-10-22 「이모지가 이상해 · 대표 그림으로」) · 그림 없는 칸(그리기 놀이)만 이모지
+      const cv=coverOf(c);b.innerHTML=(cv?`<img class="line" src="${src(cv)}" alt="" loading="lazy">`:`<span class="big">${c.emoji}</span>`)+`<span class="name">${c.name}</span>`;
+      const ci=b.querySelector('img');if(ci)ci.onerror=()=>{ci.replaceWith(Object.assign(document.createElement('span'),{className:'big',textContent:c.emoji}))};
       b.onclick=()=>{audio();curCat=c.id;renderHome();speak(['cat_'+c.id]);fg.scrollIntoView({block:'start'})};fg.appendChild(b)});
   if(!cur){catBtns(cats);return}
   const back=document.createElement('button');back.className='thumb cat back';back.innerHTML=`<span class="big">◀</span><span class="name">${cur.emoji} ${cur.name}</span>`;
