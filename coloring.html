@@ -50,6 +50,13 @@ h2 .link{margin-left:auto;font-size:18px;background:#fff;border-radius:999px;pad
 .thumb.lock{filter:grayscale(1);opacity:.45}
 .thumb.cat{background:#fff}.thumb.cat .big{font-size:52px;padding-bottom:18px}.thumb.cat .name{font-size:17px;color:var(--ink)}
 .thumb.back{background:var(--sun)}.thumb.back .big{font-size:40px}
+.more{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.more button{position:relative;aspect-ratio:5/4;background:#fff;border-radius:22px;box-shadow:0 4px 0 var(--edge);overflow:hidden;padding:0}
+.more img{position:absolute;inset:5% 10% 25%;width:80%;height:70%;object-fit:contain;mix-blend-mode:multiply}
+.more span{position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:18px}
+.sec{display:flex;flex-direction:column;gap:12px}
+.sec .back{align-self:flex-start;background:var(--sun);border-radius:999px;padding:8px 18px;font-size:19px;box-shadow:0 3px 0 #e0a514}
+@media (max-width:600px){.more{gap:8px}.more button{border-radius:16px}.more span{font-size:12px;bottom:5px}}
 .fref{height:36px;vertical-align:middle;border-radius:4px;margin-left:8px;box-shadow:0 0 0 2px var(--edge)}
 .dex{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:8px;background:var(--paper);border-radius:22px;padding:12px;box-shadow:0 4px 0 var(--edge)}
 @media (max-width:560px){.dex{grid-template-columns:repeat(5,minmax(0,1fr))}}
@@ -264,23 +271,32 @@ KKL.set(.08);setTimeout(()=>KKL.set(1),9000);</script>
 </section>
 
 <section id="home" class="screen">
-  <div class="cover">
-    <div><h1>콩콩이의 색깔 찾기</h1><p>숲의 색깔이 모두 사라졌어요. 콩콩이와 함께 찾아 줄래요?</p>
+  <!-- 첫 화면 (다운 2026-10-22): 가장 많이 쓰는 「마음대로 색칠」이 맨 위 · 잘 안 쓰는 셋은 그림 카드로 → 누르면 그 칸만 -->
+  <h2 id="freeH">🎨 마음대로 색칠 <small>먼저 좋아하는 것을 골라요</small><button class="link" id="openGallery">🖼️ 내 그림 모아보기</button></h2>
+  <div class="grid" id="freeThumbs"></div>
+  <div class="more" id="more">
+    <button data-sec="secDex"><img src="img/s09.png" alt="" loading="lazy"><span>🐰 친구 도감</span></button>
+    <button data-sec="secStory"><img src="img/s01.png" alt="" loading="lazy"><span>📖 콩콩이 이야기</span></button>
+    <button data-sec="secTale"><img src="img/t01_1.png" alt="" loading="lazy"><span>📚 명작 동화</span></button>
+  </div>
+  <div class="cover" id="homeCover">
+    <div><h1>콩콩 색칠놀이</h1>
       <div class="reader"><button class="who meBtn" id="meBtn"></button>읽어 주는 친구
         <button class="who" data-r="gunwoo"><span>👦</span>건우</button>
         <button class="who" data-r="ruri"><span>👧</span>루리</button><button class="who fsBtn" aria-label="전체 화면"><span>⛶</span>전체 화면</button><button class="who bgm-h" id="bgmHome"><span class="bgm">🎵</span>음악</button></div></div>
-    <button class="bigbtn" id="startStory"><span class="ico">📖</span><span id="startLabel">이야기 시작</span></button>
   </div>
-  <div class="jump"><button data-j="storyH">📖 콩콩이 이야기</button><button data-j="taleH">📚 명작 동화</button><button data-j="freeH">🎨 마음대로 색칠</button></div>
-  <h2>🐰 콩콩이 친구 도감 <small>이야기를 칠하면 친구 스티커가 생겨요</small></h2>
-  <div class="dex" id="dex"></div>
-  <h2 id="storyH">📖 이야기 그림 <small>차례대로 열려요</small></h2>
-  <div class="row" id="storyThumbs"></div>
-  <h2 id="taleH">📚 명작 동화 색칠 <small>이야기를 들으며 장면마다 칠해요</small></h2>
-  <div class="tales" id="taleList"></div>
-  <h2 id="freeH">🎨 마음대로 색칠 <small>먼저 좋아하는 것을 골라요</small><button class="link" id="openGallery">🖼️ 내 그림 모아보기</button></h2>
-  <div class="grid" id="freeThumbs"></div>
-  <div class="grown">어른용 · <button id="resetAll">길게 눌러 처음부터</button></div>
+  <div class="sec" id="secDex" hidden><button class="back">◀ 처음 화면</button>
+    <h2>🐰 콩콩이 친구 도감 <small>이야기를 칠하면 친구 스티커가 생겨요</small></h2>
+    <div class="dex" id="dex"></div></div>
+  <div class="sec" id="secStory" hidden><button class="back">◀ 처음 화면</button>
+    <div class="cover"><div><h1>콩콩이의 색깔 찾기</h1><p>숲의 색깔이 모두 사라졌어요. 콩콩이와 함께 찾아 줄래요?</p></div>
+      <button class="bigbtn" id="startStory"><span class="ico">📖</span><span id="startLabel">이야기 시작</span></button></div>
+    <h2 id="storyH">📖 이야기 그림 <small>차례대로 열려요</small></h2>
+    <div class="row" id="storyThumbs"></div></div>
+  <div class="sec" id="secTale" hidden><button class="back">◀ 처음 화면</button>
+    <h2 id="taleH">📚 명작 동화 색칠 <small>이야기를 들으며 장면마다 칠해요</small></h2>
+    <div class="tales" id="taleList"></div></div>
+  <div class="grown" id="grownBox">어른용 · <button id="resetAll">길게 눌러 처음부터</button></div>
 </section>
 
 <section id="paint" class="screen" hidden>
@@ -417,8 +433,8 @@ function makeMySticker(){if(!owner||celebrating)return;
   setBubble('<b>내 그림 스티커</b>가 생겼어요! 🌟 이제 아무 그림에나 톡 붙여 봐요.');oneShot('sparkle',.9);sparkleAt(TL.ox+512,TL.oy+512,14)}
 const src=id=>`img/${id}.png`;
 let CATS=[],FLAGTIP={},curCat=null;
-fetch('tales/cats.json').then(r=>r.json()).then(j=>{KKL.step();CATS=j.cats;FREE=CATS.flatMap(c=>c.items);FLAGTIP=j.flagTip||{};if(!$('home').hidden)renderHome()}).catch(()=>{});
-let TALES=[];fetch('tales/tales.json').then(r=>r.json()).then(j=>{KKL.step();TALES=j.tales;if(!$('home').hidden)renderHome()}).catch(()=>{});
+fetch('tales/cats.json',{cache:'no-cache'}).then(r=>r.json()).then(j=>{KKL.step();CATS=j.cats;FREE=CATS.flatMap(c=>c.items);FLAGTIP=j.flagTip||{};if(!$('home').hidden)renderHome()}).catch(()=>{});
+let TALES=[];fetch('tales/tales.json',{cache:'no-cache'}).then(r=>r.json()).then(j=>{KKL.step();TALES=j.tales;if(!$('home').hidden)renderHome()}).catch(()=>{});
 let taleIdx=0,pageIdx=0;
 const taleOf=id=>{const m=/^(t\d\d)_(\d)$/.exec(id);return m?{t:TALES.findIndex(x=>x.id===m[1]),p:+m[2]-1}:null};
 const taleIds=()=>TALES.flatMap(t=>t.pages.map((_,i)=>`${t.id}_${i+1}`));
@@ -1127,7 +1143,13 @@ $('kidSave').onclick=()=>{audio();const list=profiles();const id=list.length?'p'
 function pickKid(id,fresh){PID=id;try{localStorage.setItem('kk:pid',JSON.stringify(id))}catch(e){}const k=me(),a=AGES.kid;
   if(fresh||store.get('size')==null){store.set('size',a.size)}sizeIdx=store.get('size');document.querySelectorAll('.size').forEach((x,i)=>x.setAttribute('aria-pressed',i===sizeIdx));
   setTool(a.tool);buildStickers();buildMyColors();land(fresh?'home':(store.get('last')||'home'))}
-function land(where){renderHome();if(where==='tale'){show('home');setTimeout(()=>$('taleList').scrollIntoView({block:'start'}),50);return}
+/* 첫 화면의 한 칸만 보기 (도감 · 이야기 · 명작 동화). null = 첫 화면 전체 */
+let HSEC=null;
+function openSec(id){HSEC=id;['freeH','freeThumbs','more','homeCover','grownBox'].forEach(x=>$(x).hidden=!!id);
+  ['secDex','secStory','secTale'].forEach(x=>$(x).hidden=x!==id);$('home').scrollTop=0}
+document.querySelectorAll('#more button').forEach(b=>b.onclick=()=>{audio();tone(600,.1,'triangle',.08);openSec(b.dataset.sec)});
+document.querySelectorAll('.sec .back').forEach(b=>b.onclick=()=>{audio();openSec(null)});
+function land(where){renderHome();if(where==='tale'){openSec('secTale');show('home');return}
   if(where==='story'){const prog=store.get('story')||0;if(prog<STORY.length){openPic(STORY[prog].id,'story',prog);return}}
   show('home');if(where==='free')setTimeout(()=>$('freeThumbs').scrollIntoView({block:'start'}),50)}
 $('meBtn').onclick=()=>{audio();hush();renderWho()};
