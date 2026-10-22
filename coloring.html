@@ -99,6 +99,9 @@ h2 .link{margin-left:auto;font-size:18px;background:#fff;border-radius:999px;pad
 .tile{position:absolute;width:1024px;height:1024px}
 .board canvas{position:absolute;inset:0;width:100%;height:100%}
 .tool svg{width:76%;height:76%;display:block}
+.stk-sel{position:absolute;border:3px dashed #ff7eb6;border-radius:50%;box-sizing:border-box;pointer-events:none}
+.stk-sel i{position:absolute;border-radius:50%;background:#fff;box-shadow:0 0 0 3px #ff7eb6,0 3px 6px rgba(0,0,0,.2);display:grid;place-items:center}
+.stk-sel i svg{width:70%;height:70%}
 .zoom{position:absolute;left:8px;bottom:8px;display:flex;flex-direction:column;gap:6px;z-index:2}
 .zoom button{width:44px;height:44px;border-radius:50%;background:var(--paper);font-size:24px;box-shadow:0 3px 0 var(--edge);display:grid;place-items:center;font-family:var(--emoji);opacity:.92}
 .card.add{width:min(92vw,620px)}.card.add .pt{font-family:var(--hand);font-size:21px;color:var(--ink);margin:0}
@@ -278,7 +281,7 @@ KKL.set(.08);setTimeout(()=>KKL.set(1),9000);</script>
   </div>
   <div class="stage" id="stage">
     <div class="board loading" id="board">
-      <div class="world" id="world"><canvas id="cvStk" class="stk"></canvas><canvas id="cvAnim" class="anim"></canvas></div>
+      <div class="world" id="world"><canvas id="cvStk" class="stk"></canvas><div class="stk-sel" id="stkSel" hidden><i><svg viewBox="0 0 24 24"><path d="M6 6l12 12M6 6v6M6 6h6M18 18v-6M18 18h-6" fill="none" stroke="#ff4b8b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></i></div><canvas id="cvAnim" class="anim"></canvas></div>
     </div>
     <canvas class="fx" id="fx"></canvas>
     <div class="zoom"><button data-z="in" aria-label="크게 보기">＋</button><button data-z="out" aria-label="작게 보기">－</button><button data-z="fit" aria-label="전체 보기">🖼️</button></div>
@@ -514,7 +517,7 @@ function layout(){const ww=worldW(),wh=worldH();world.style.width=ww+'px';world.
   const k=Math.min(1,1600/Math.max(ww,wh)),aw=Math.round(ww*k),ah=Math.round(wh*k);if(cvA.width!==aw||cvA.height!==ah){cvA.width=aw;cvA.height=ah}}
 /* 보기: 처음엔 판 전체가 화면에 들어오게 · 두 손가락 = 확대/축소/이동 · 한 손가락은 늘 칠하기 */
 const VIEW={x:0,y:0,s:1,auto:true};let glideT;
-function applyView(){world.style.transform=`translate(${VIEW.x}px,${VIEW.y}px) scale(${VIEW.s})`}
+function applyView(){world.style.transform=`translate(${VIEW.x}px,${VIEW.y}px) scale(${VIEW.s})`;updateSel()}
 function fitScale(){const b=board.getBoundingClientRect();return Math.min(b.width/worldW(),b.height/worldH())*.98}
 function glide(on){if(!on)return;world.classList.add('glide');clearTimeout(glideT);glideT=setTimeout(()=>world.classList.remove('glide'),400)}
 function fitView(g){const b=board.getBoundingClientRect();if(!b.width)return;const s=fitScale();
@@ -686,7 +689,14 @@ function topColor(){if(!used.c.length)return 'x';const pal=used.c.map(i=>hex(COL
 function praiseKey(){if(used.rb)return'p_rainbow';if(used.pt)return'p_pattern';const n=used.c.length;return n?'p_c'+Math.min(n,6):'p_full'}
 
 /* 스티커 */
-function drawStickers(ctx,list){ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);ctx.textAlign='center';ctx.textBaseline='middle';
+/* 스티커 크기 바꾸기 (다운 2026-10-22): 붙이거나 톡 누른 스티커에 점선 동그라미 + 손잡이 → 손잡이를 끌거나 굵기 단추로 크기 조절 */
+let selStk=null;const selR=s=>s.s*(s.e.startsWith('my:')?.75:.6),hSize=()=>40/VIEW.s;
+function updateSel(){const el=$('stkSel'),s=selStk;if(!el)return;if(tool!=='sticker'||!s||!stickers.includes(s)){el.hidden=true;return}
+  const r=selR(s),h=hSize(),hd=el.firstChild;el.hidden=false;
+  Object.assign(el.style,{left:s.x-r+'px',top:s.y-r+'px',width:2*r+'px',height:2*r+'px',borderWidth:3/VIEW.s+'px'});
+  Object.assign(hd.style,{width:h+'px',height:h+'px',left:r+r*.707-h/2+'px',top:r+r*.707-h/2+'px',boxShadow:`0 0 0 ${3/VIEW.s}px #ff7eb6`})}
+function hitHandle(x,y){const s=selStk;if(tool!=='sticker'||!s||!stickers.includes(s))return false;const r=selR(s);return Math.hypot(x-s.x-r*.707,y-s.y-r*.707)<hSize()*.8}
+function drawStickers(ctx,list){if(ctx===kctx)updateSel();ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);ctx.textAlign='center';ctx.textBaseline='middle';
   for(const s of list){ctx.save();ctx.translate(s.x,s.y);ctx.rotate(s.r);if(s.e.startsWith('my:')){const im=myImg(s.e,()=>drawStickers(ctx,list));if(im.ok){const z=s.s*1.6,k=im.width/im.height;ctx.drawImage(im,-z*Math.min(1,k)/2,-z/Math.max(1,k)/2,z*Math.min(1,k),z/Math.max(1,k))}}
     else if(s.e.startsWith('img:')){const im=stkImg(s.e,()=>drawStickers(ctx,list));if(im.ok){const z=s.s*1.15;ctx.drawImage(im,-z/2,-z/2,z,z)}}
     else{ctx.font=`${s.s}px ${getComputedStyle(document.body).getPropertyValue('--emoji')}`;ctx.fillText(s.e,0,0)}ctx.restore()}}
@@ -698,7 +708,7 @@ function removeSticker(s){stickers=stickers.filter(o=>o!==s);drawStickers(kctx,s
 function placeSticker(x,y){const base=[75,120,185][sizeIdx];const s={e:stkPick,x,y,r:(Math.random()-.5)*.5,s:base};
   // 거울 · 만화경 타일 위면 그 타일 가운데를 기준으로 따라 붙인다
   const t=tileAt(x,y),ox=t?t.ox:0,oy=t?t.oy:0,S=SYMS[t?t.sym:''];
-  const mine=[];S.forEach(M=>{const [px,py]=tx(M,x-ox,y-oy),o={...s,x:px+ox,y:py+oy,r:M[0]*M[3]-M[1]*M[2]<0?-s.r:s.r};mine.push(o);stickers.push(o)});
+  const mine=[];setTimeout(()=>{selStk=mine[0];updateSel()},310);S.forEach(M=>{const [px,py]=tx(M,x-ox,y-oy),o={...s,x:px+ox,y:py+oy,r:M[0]*M[3]-M[1]*M[2]<0?-s.r:s.r};mine.push(o);stickers.push(o)});
   const t0=performance.now();(function grow(now){const k=Math.min(1,(now-t0)/260);const sc=k<.7?k/.7*1.25:1.25-(k-.7)/.3*.25;
     mine.forEach(o=>o.s=base*sc);drawStickers(kctx,stickers);if(k<1)requestAnimationFrame(grow)})(t0);setTimeout(()=>{mine.forEach(o=>o.s=base);drawStickers(kctx,stickers)},300);
   tone(700,.12,'triangle',.12);setTimeout(()=>tone(1050,.1,'triangle',.08),70);sparkleAt(x,y,5);noteUse();afterChange()}
@@ -722,7 +732,8 @@ board.addEventListener('pointerdown',e=>{ptrs.set(e.pointerId,{x:e.clientX,y:e.c
   if(hold||!TL||pointerId!==null||celebrating)return;audio();
   vRect=board.getBoundingClientRect();const [x,y]=toXY(e);hideHint();downAt=performance.now();
   if(tool==='sticker'){if(x<0||y<0||x>worldW()||y>worldH()){vRect=null;return}pushUndo([]);downMark=undoStack.length;const hit=hitSticker(x,y);
-    if(hit){drag={s:hit,dx:hit.x-x,dy:hit.y-y};pointerId=e.pointerId;try{board.setPointerCapture(e.pointerId)}catch(_){}hit.s*=1.12;drawStickers(kctx,stickers);tone(620,.08,'triangle',.08);return}
+    if(hitHandle(x,y)){const s=selStk;drag={s,rs:true,base:s.s,d0:Math.max(20,Math.hypot(x-s.x,y-s.y))};pointerId=e.pointerId;try{board.setPointerCapture(e.pointerId)}catch(_){}tone(620,.08,'triangle',.08);return}
+    if(hit){selStk=hit;drag={s:hit,dx:hit.x-x,dy:hit.y-y};pointerId=e.pointerId;try{board.setPointerCapture(e.pointerId)}catch(_){}hit.s*=1.12;drawStickers(kctx,stickers);tone(620,.08,'triangle',.08);return}
     vRect=null;placeSticker(x,y);return}
   const sh=(tool==='wipe'||tool==='eraser')&&hitSticker(x,y);
   if(sh&&tool==='wipe'){vRect=null;pushUndo([]);downMark=undoStack.length;removeSticker(sh);return}
@@ -735,12 +746,12 @@ board.addEventListener('pointerdown',e=>{ptrs.set(e.pointerId,{x:e.clientX,y:e.c
   noteUse();cur={r:id,x:lx,y:ly,t};mAcc=MAGICS.find(m=>m[0]===magic)[3];mN=0;seg2(lx,ly,lx,ly);rub()});
 board.addEventListener('pointermove',e=>{if(ptrs.has(e.pointerId))ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(pinch){if(ptrs.size>=2)pinchMove();return}
-  if(drag&&e.pointerId===pointerId){const [x,y]=toXY(e);drag.s.x=Math.max(0,Math.min(worldW(),x+drag.dx));drag.s.y=Math.max(0,Math.min(worldH(),y+drag.dy));drawStickers(kctx,stickers);return}
+  if(drag&&e.pointerId===pointerId){const [x,y]=toXY(e);if(drag.rs){drag.s.s=Math.max(40,Math.min(700,drag.base*Math.hypot(x-drag.s.x,y-drag.s.y)/drag.d0));drawStickers(kctx,stickers);return}drag.s.x=Math.max(0,Math.min(worldW(),x+drag.dx));drag.s.y=Math.max(0,Math.min(worldH(),y+drag.dy));drawStickers(kctx,stickers);return}
   if(!cur||e.pointerId!==pointerId)return;
   const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];for(const ev of evs.length?evs:[e]){const [x,y]=toXY(ev);pend.push([x-cur.t.ox,y-cur.t.oy]);if(tool==='eraser'){const h=hitSticker(x,y);if(h)removeSticker(h)}}
   if(!rafOn){rafOn=true;requestAnimationFrame(flush)}rub()});
 const endStroke=e=>{ptrs.delete(e.pointerId);if(pinch&&ptrs.size<2)pinch=null;if(!ptrs.size)hold=false;
-  if(drag&&e.pointerId===pointerId){drag.s.s/=1.12;drag=null;pointerId=null;vRect=null;drawStickers(kctx,stickers);tone(480,.08,'triangle',.07);afterChange();return}
+  if(drag&&e.pointerId===pointerId){if(!drag.rs)drag.s.s/=1.12;drag=null;pointerId=null;vRect=null;drawStickers(kctx,stickers);tone(480,.08,'triangle',.07);afterChange();return}
   if(!cur||e.pointerId!==pointerId)return;flush();vRect=null;stopRub();const id=cur.r;cur=null;pointerId=null;
   if(R[id].count){const cov=coverage(id);if(cov>=.6){if(!done[id])tone(880,.15,'triangle',.06);done[id]=1}else delete done[id]}
   drewSomething=true;afterChange()};
@@ -841,7 +852,7 @@ const nameOf=id=>{if(isBlank(id))return BLANK[id][0];const tl=taleOf(id);if(tl&&
 function setBubble(text,tip){$('bubble').innerHTML=text+(tip?`<span class="tip">👪 함께 해요 · ${tip}</span>`:'')}
 
 function openPic(id,m,idx){store.set('last',m==='story'?'story':m==='tale'?'tale':'free');mode=m;storyIdx=idx||0;pic=id;undoStack=[];stickers=[];used={c:[],pt:false,rb:false};celebrated=false;celebrating=false;drewSomething=false;
-  $('award').hidden=true;$('addPick').hidden=true;const tok=++openTok;
+  $('award').hidden=true;$('addPick').hidden=true;selStk=null;const tok=++openTok;
   clearTiles();kctx.clearRect(0,0,cvS.width,cvS.height);const t0=newTile(id,0,0);t0.sym=id==='mirror'?'m':id==='kaleido'?'k':'';useTile(t0);
   board.classList.add('loading');$('nextBtn').hidden=true;
   const st=m==='story'?STORY[storyIdx]:null;
@@ -927,7 +938,7 @@ $('goHome').onclick=()=>{hush();if(pic)saveNow();pic=null;openTok++;clearTiles()
 $('sayAgain').onclick=()=>{audio();if(lastKeys.length)speak(lastKeys)};
 
 /* 도구 · 크레용 · 무늬 · 스티커 */
-function setTool(k){tool=k;document.querySelectorAll('#tools .tool[data-k]').forEach(t=>t.setAttribute('aria-pressed',t.dataset.k===k));
+function setTool(k){tool=k;updateSel();document.querySelectorAll('#tools .tool[data-k]').forEach(t=>t.setAttribute('aria-pressed',t.dataset.k===k));
   const stk=k==='sticker';$('stickers').hidden=!stk;$('colors').hidden=stk;$('patterns').hidden=stk||k==='magic';$('magics').hidden=k!=='magic'}
 MAGICS.forEach(([k,ico,name],i)=>{const b=document.createElement('button');b.className='mg';b.textContent=ico;b.setAttribute('aria-label',name);
   b.setAttribute('aria-pressed',k===magic);b.onclick=()=>{audio();magic=k;document.querySelectorAll('.mg').forEach(x=>x.setAttribute('aria-pressed',x===b));
@@ -967,7 +978,7 @@ buildMyColors();
 drawPatButtons();
 [['작게',12],['보통',22],['크게',34]].forEach(([name,px],i)=>{const b=document.createElement('button');b.className='size';b.setAttribute('aria-label','굵기 '+name);
   b.innerHTML=`<i style="width:${px}px;height:${px}px"></i>`;b.setAttribute('aria-pressed',i===sizeIdx);
-  b.onclick=()=>{audio();sizeIdx=i;store.set('size',i);document.querySelectorAll('.size').forEach(x=>x.setAttribute('aria-pressed',x===b));tone(380+i*160,.12,'sine',.1)};$('sizes').appendChild(b)});
+  b.onclick=()=>{audio();if(tool==='sticker'&&selStk&&stickers.includes(selStk)){pushUndo([]);selStk.s=[75,120,185][i];drawStickers(kctx,stickers);afterChange()}sizeIdx=i;store.set('size',i);document.querySelectorAll('.size').forEach(x=>x.setAttribute('aria-pressed',x===b));tone(380+i*160,.12,'sine',.1)};$('sizes').appendChild(b)});
 function buildStickers(){const fr=store.get('friends')||[],friends=STORY.filter(x=>fr.includes(x.id)).map(x=>x.f);
   const sets=STK_SETS.map(([n,l])=>[n,n==='그림'?IMG_STK:l]);if(friends.length)sets.splice(1,0,['친구',friends]);
   const mine=Object.keys(mystk()).reverse().map(k=>'my:'+k);if(mine.length)sets.unshift(['내 그림',mine]);
