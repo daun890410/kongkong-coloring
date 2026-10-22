@@ -57,6 +57,7 @@ h2 .link{margin-left:auto;font-size:18px;background:#fff;border-radius:999px;pad
 .sec{display:flex;flex-direction:column;gap:12px}
 .sec .back{align-self:flex-start;background:var(--sun);border-radius:999px;padding:8px 18px;font-size:19px;box-shadow:0 3px 0 #e0a514}
 @media (max-width:600px){.more{gap:8px}.more button{border-radius:16px}.more span{font-size:12px;bottom:5px}}
+.ver{font-family:var(--hand);font-size:14px;color:var(--mute)}
 .fref{height:36px;vertical-align:middle;border-radius:4px;margin-left:8px;box-shadow:0 0 0 2px var(--edge)}
 .dex{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:8px;background:var(--paper);border-radius:22px;padding:12px;box-shadow:0 4px 0 var(--edge)}
 @media (max-width:560px){.dex{grid-template-columns:repeat(5,minmax(0,1fr))}}
@@ -273,19 +274,19 @@ KKL.set(.08);setTimeout(()=>KKL.set(1),9000);</script>
 </section>
 
 <section id="home" class="screen">
-  <!-- 첫 화면 (다운 2026-10-22): 가장 많이 쓰는 「마음대로 색칠」이 맨 위 · 잘 안 쓰는 셋은 그림 카드로 → 누르면 그 칸만 -->
+  <!-- 첫 화면 (다운 2026-10-22): 제목 칸(설정 · 업데이트) 다음에 가장 많이 쓰는 「마음대로 색칠」 · 잘 안 쓰는 셋은 그림 카드로 → 누르면 그 칸만 -->
+  <div class="cover" id="homeCover">
+    <div><h1>콩콩 색칠놀이</h1>
+      <div class="reader"><button class="who meBtn" id="meBtn"></button>읽어 주는 친구
+        <button class="who" data-r="gunwoo"><span>👦</span>건우</button>
+        <button class="who" data-r="ruri"><span>👧</span>루리</button><button class="who fsBtn" aria-label="전체 화면"><span>⛶</span>전체 화면</button><button class="who bgm-h" id="bgmHome"><span class="bgm">🎵</span>음악</button><button class="who" id="updBtn"><span>🔄</span>업데이트</button><small class="ver" id="verTxt"></small></div></div>
+  </div>
   <h2 id="freeH">🎨 마음대로 색칠 <small>먼저 좋아하는 것을 골라요</small><button class="link" id="openGallery">🖼️ 내 그림 모아보기</button></h2>
   <div class="grid" id="freeThumbs"></div>
   <div class="more" id="more">
     <button data-sec="secDex"><img src="img/s09.png" alt="" loading="lazy"><span>🐰 친구 도감</span></button>
     <button data-sec="secStory"><img src="img/s01.png" alt="" loading="lazy"><span>📖 콩콩이 이야기</span></button>
     <button data-sec="secTale"><img src="img/t01_1.png" alt="" loading="lazy"><span>📚 명작 동화</span></button>
-  </div>
-  <div class="cover" id="homeCover">
-    <div><h1>콩콩 색칠놀이</h1>
-      <div class="reader"><button class="who meBtn" id="meBtn"></button>읽어 주는 친구
-        <button class="who" data-r="gunwoo"><span>👦</span>건우</button>
-        <button class="who" data-r="ruri"><span>👧</span>루리</button><button class="who fsBtn" aria-label="전체 화면"><span>⛶</span>전체 화면</button><button class="who bgm-h" id="bgmHome"><span class="bgm">🎵</span>음악</button></div></div>
   </div>
   <div class="sec" id="secDex" hidden><button class="back">◀ 처음 화면</button>
     <h2>🐰 콩콩이 친구 도감 <small>이야기를 칠하면 친구 스티커가 생겨요</small></h2>
@@ -1180,6 +1181,13 @@ function openSec(id){HSEC=id;['freeH','freeThumbs','more','homeCover','grownBox'
   ['secDex','secStory','secTale'].forEach(x=>$(x).hidden=x!==id);$('home').scrollTop=0}
 document.querySelectorAll('#more button').forEach(b=>b.onclick=()=>{audio();tone(600,.1,'triangle',.08);openSec(b.dataset.sec)});
 document.querySelectorAll('.sec .back').forEach(b=>b.onclick=()=>{audio();openSec(null)});
+/* 🔄 업데이트 (다운 2026-10-22 「누르면 업데이트하게」): 칠하던 것 저장 → 옛 저장본(sw 캐시) 지움 → 새 판 받아 다시 열기. 칠한 그림(localStorage)은 그대로 */
+$('verTxt').textContent=window.APPV?`판 ${APPV.slice(4,6)}.${APPV.slice(6,8)} ${APPV.slice(8,10)}:${APPV.slice(10,12)}`:'';
+$('updBtn').onclick=async()=>{audio();const b=$('updBtn');b.disabled=true;b.lastChild.textContent='받는 중…';try{if(pic)saveNow()}catch(e){}
+  const sw=navigator.serviceWorker;
+  try{const r=sw&&await sw.getRegistration();if(r)await r.update()}catch(e){}
+  try{if(window.caches)await Promise.all((await caches.keys()).filter(k=>k.startsWith('kk-')).map(k=>caches.delete(k)))}catch(e){}
+  if(sw&&sw.controller)location.replace(location.pathname+'?v='+Date.now());else location.reload()};   // ?v= 로 브라우저 HTTP 저장본도 건너뜀
 function land(where){renderHome();if(where==='tale'){openSec('secTale');show('home');return}
   if(where==='story'){const prog=store.get('story')||0;if(prog<STORY.length){openPic(STORY[prog].id,'story',prog);return}}
   show('home');if(where==='free')setTimeout(()=>$('freeThumbs').scrollIntoView({block:'start'}),50)}
