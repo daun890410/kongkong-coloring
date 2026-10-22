@@ -1156,7 +1156,7 @@ var renderHome=function(){const prog=store.get('story')||0,fr=store.get('friends
   cur.items.forEach(([id,name])=>{const b=thumb(id,name,false,'');const li=b.querySelector('img.line');
     if(li)li.onerror=()=>{b.innerHTML=`<span class="big">${cur.emoji}</span><span class="name">${name} · 준비 중</span>`;b.classList.add('lock')};
     b.onclick=()=>{audio();openPic(id,'free')};fg.appendChild(b)})}
-document.querySelectorAll('.who').forEach(b=>b.onclick=()=>{audio();store.set('reader',b.dataset.r);renderHome();speak(['free_blank'])});
+document.querySelectorAll('.who[data-r]').forEach(b=>b.onclick=()=>{audio();store.set('reader',b.dataset.r);renderHome();speak(['free_blank'])});
 $('startStory').onclick=()=>{audio();const prog=store.get('story')||0;if(prog>=STORY.length)openBook(0);else openPic(STORY[prog].id,'story',prog)};
 let holdT;const rs=$('resetAll');
 rs.addEventListener('pointerdown',()=>{holdT=setTimeout(()=>{[...STORY.map(s=>s.id),...FREE.map(f=>f[0]),...Object.keys(BLANK),...taleIds()].forEach(id=>{store.del('pic:'+id);store.del('scene:'+id);for(let n=1;n<MAXT;n++)store.del(`pic:${id}~${n}`)});TALES.forEach(t=>store.del('tale:'+t.id));

@@ -1,4 +1,4 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="theme-color" content="#dff3f6"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192-v2.png"><link rel="icon" href="icon-192-v2.png"><style>[hidden]{display:none!important}html,body{margin:0}:root{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}</style><script>window.APPV="20261022182248"</script></head><body>
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="theme-color" content="#dff3f6"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-192-v2.png"><link rel="icon" href="icon-192-v2.png"><style>[hidden]{display:none!important}html,body{margin:0}:root{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}</style><script>window.APPV="20261022182519"</script></head><body>
 <title>콩콩 색칠놀이</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gaegu:wght@700&display=swap" media="print" onload="this.media='all'">
@@ -1157,7 +1157,7 @@ var renderHome=function(){const prog=store.get('story')||0,fr=store.get('friends
   cur.items.forEach(([id,name])=>{const b=thumb(id,name,false,'');const li=b.querySelector('img.line');
     if(li)li.onerror=()=>{b.innerHTML=`<span class="big">${cur.emoji}</span><span class="name">${name} · 준비 중</span>`;b.classList.add('lock')};
     b.onclick=()=>{audio();openPic(id,'free')};fg.appendChild(b)})}
-document.querySelectorAll('.who').forEach(b=>b.onclick=()=>{audio();store.set('reader',b.dataset.r);renderHome();speak(['free_blank'])});
+document.querySelectorAll('.who[data-r]').forEach(b=>b.onclick=()=>{audio();store.set('reader',b.dataset.r);renderHome();speak(['free_blank'])});
 $('startStory').onclick=()=>{audio();const prog=store.get('story')||0;if(prog>=STORY.length)openBook(0);else openPic(STORY[prog].id,'story',prog)};
 let holdT;const rs=$('resetAll');
 rs.addEventListener('pointerdown',()=>{holdT=setTimeout(()=>{[...STORY.map(s=>s.id),...FREE.map(f=>f[0]),...Object.keys(BLANK),...taleIds()].forEach(id=>{store.del('pic:'+id);store.del('scene:'+id);for(let n=1;n<MAXT;n++)store.del(`pic:${id}~${n}`)});TALES.forEach(t=>store.del('tale:'+t.id));
