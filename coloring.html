@@ -316,7 +316,7 @@ const PRAISE={p_c1:'한 가지 색으로 꼼꼼하게 칠했네!',p_c2:'두 가�
  p_pattern:'무늬로도 칠했네! 멋진 생각이야!',p_rainbow:'무지개로 칠했구나! 반짝반짝 멋지다!',p_full:'끝까지 다 칠했어! 정말 열심히 했다!'};
 const COLORS=[['#ff4b4b','빨강'],['#ff9a1f','주황'],['#ffd400','노랑'],['#8ad13f','연두'],['#22a85a','초록'],['#4cc3ff','하늘색'],
  ['#2f6bff','파랑'],['#8b5cf6','보라'],['#ff7eb6','분홍'],['#a0643c','갈색'],['#ffc9a3','살구색'],['#4a4a4a','까망']];
-const TOOLS=[['brush','🖌️','붓'],['crayon','🖍️','크레용'],['glitter','✨','반짝이'],['magic','🪄','마법 붓'],['fill','🪣','톡 채우기'],['sticker','🌟','스티커'],['eraser','🧽','지우개'],['undo','↩️','되돌리기'],['reset','🔄','이 그림 처음부터']];
+const TOOLS=[['brush','🖌️','붓'],['crayon','🖍️','크레용'],['glitter','✨','반짝이'],['magic','🪄','마법 붓'],['fill','🪣','톡 채우기'],['sticker','🌟','스티커'],['eraser','🧽','지우개'],['undo','↩️','되돌리기'],['tostk','🏷️','스티커로 만들기'],['reset','🔄','이 그림 처음부터']];
 const STK_SETS=[['반짝',['⭐','🌟','✨','💖','❤️','🌈','🎀','👑','💎','🫧','🌙','☀️']],
  ['그림',[]],
  ['동물',['🐶','🐱','🐰','🐻','🐼','🦁','🐯','🐸','🐥','🐧','🦄','🐞','🦋','🐝','🐠','🐳','🦖','🐢']],
@@ -327,7 +327,35 @@ const STK_SETS=[['반짝',['⭐','🌟','✨','💖','❤️','🌈','🎀','�
 const IMG_STK=Array.from({length:24},(_,i)=>'img:k'+String(i+1).padStart(2,'0'));
 const STKIMG={};
 function stkImg(e,cb){const k=e.slice(4);if(!STKIMG[k]){const im=new Image();STKIMG[k]=im;im.onload=()=>{im.ok=true;cb&&cb()};im.src=`img/stk/${k}.png`}else if(!STKIMG[k].ok&&cb)STKIMG[k].addEventListener('load',cb,{once:true});return STKIMG[k]}
-let stkTab='반짝';
+let stkTab='반짝',bgId=0;
+const MYIMG={};const mystk=()=>store.get('mystk')||{};
+function myImg(e,cb){const k=e.slice(3);if(!MYIMG[k]){const im=new Image();MYIMG[k]=im;im.onload=()=>{im.ok=true;cb&&cb()};im.src=mystk()[k]||''}
+  else if(!MYIMG[k].ok&&cb)MYIMG[k].addEventListener('load',cb,{once:true});return MYIMG[k]}
+/* 지금 칠한 그림을 흰 테두리 스티커로 오려 「내 그림」 스티커 칸에 넣는다 (바탕은 빼고 그림만) */
+function makeMySticker(){if(!owner||celebrating)return;
+  const m=document.createElement('canvas');m.width=m.height=W;const mx=m.getContext('2d'),md=mx.createImageData(W,W);
+  const pd=bgId?null:pctx.getImageData(0,0,W,W).data;let any=0;
+  for(let i=0;i<N;i++){const on=bgId?(owner[i]!==bgId||isBar[i]):(pd[i*4+3]>20);if(on){md.data[i*4+3]=255;any++}}
+  if(bgId)for(let i=0;i<N;i++)if(owner[i]===bgId&&!isBar[i])md.data[i*4+3]=0;
+  mx.putImageData(md,0,0);
+  if(!bgId&&stickers.length){mx.globalCompositeOperation='source-over';mx.drawImage(cvS,0,0)}
+  if(!any&&!stickers.length){tone(220,.2);return}
+  const out=document.createElement('canvas');out.width=out.height=W;const ox=out.getContext('2d');
+  for(let a=0;a<16;a++){const t=a*Math.PI/8;ox.drawImage(m,Math.cos(t)*14,Math.sin(t)*14)}
+  ox.globalCompositeOperation='source-in';ox.fillStyle='#fff';ox.fillRect(0,0,W,W);
+  const t=document.createElement('canvas');t.width=t.height=W;const tx2=t.getContext('2d');
+  tx2.fillStyle='#fff';tx2.fillRect(0,0,W,W);tx2.drawImage(cvP,0,0);tx2.drawImage(cvL,0,0);tx2.drawImage(cvS,0,0);
+  tx2.globalCompositeOperation='destination-in';tx2.drawImage(m,0,0);
+  ox.globalCompositeOperation='source-over';ox.drawImage(t,0,0);
+  const a=ox.getImageData(0,0,W,W).data;let x0=W,y0=W,x1=0,y1=0;
+  for(let y=0;y<W;y+=2)for(let x=0;x<W;x+=2)if(a[(y*W+x)*4+3]>10){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+  const w=x1-x0+2,h=y1-y0+2,z=Math.max(w,h),sc=Math.min(1,320/z),f=document.createElement('canvas');f.width=Math.round(w*sc);f.height=Math.round(h*sc);
+  f.getContext('2d').drawImage(out,x0,y0,w,h,0,0,f.width,f.height);
+  let url=f.toDataURL('image/webp',.85);if(!url.startsWith('data:image/webp'))url=f.toDataURL('image/png');
+  const id=Date.now().toString(36),all=mystk(),keys=Object.keys(all);all[id]=url;while(keys.length>=20){delete all[keys.shift()]}
+  store.set('mystk',all);if(!store.get('mystk')||!store.get('mystk')[id]){setBubble('저장할 자리가 모자라요. 「내 그림」 스티커를 몇 개 지워 주세요.');return}
+  stkTab='내 그림';stkPick='my:'+id;setTool('sticker');buildStickers();
+  setBubble('<b>내 그림 스티커</b>가 생겼어요! 🌟 이제 아무 그림에나 톡 붙여 봐요.');oneShot('sparkle',.9);sparkleAt(512,512,14)}
 const src=id=>`img/${id}.png`;
 let CATS=[],FLAGTIP={},curCat=null;
 fetch('tales/cats.json').then(r=>r.json()).then(j=>{CATS=j.cats;FREE=CATS.flatMap(c=>c.items);FLAGTIP=j.flagTip||{};if(!$('home').hidden)renderHome()}).catch(()=>{});
@@ -466,12 +494,12 @@ function analyze(img){
   for(let y=0;y<W;y++){const hr=(y>>1)*H,row=y*W;for(let x=0;x<W;x++){const k=hr+(x>>1);owner[row+x]=own[k];isBar[row+x]=barH[k]}}
   for(const r of R){if(!r)continue;r.x0*=2;r.y0*=2;r.x1=r.x1*2+1;r.y1=r.y1*2+1;r.sx*=2;r.sy*=2;r.area*=4}
   // 바탕(테두리에 닿는 가장 큰 칸)과 아주 작은 칸은 「다 칠했나」 셈에서 뺀다
-  let bg=0;for(const r of R)if(r&&r.border&&(!bg||r.area>R[bg].area))bg=r.id;
+  let bg=0;for(const r of R)if(r&&r.border&&(!bg||r.area>R[bg].area))bg=r.id;bgId=bg;
   eligible=0;for(const r of R){if(!r)continue;r.count=r.id!==bg&&r.area>N*.0006;if(r.count)eligible+=r.area}
   masks=new Map();
 }
 /* 빈 도화지 · 거울 그림: 화면 전체가 한 칸 */
-function setupBlank(s){owner=new Int32Array(N).fill(1);isBar=new Uint8Array(N);
+function setupBlank(s){bgId=0;owner=new Int32Array(N).fill(1);isBar=new Uint8Array(N);
   R=[null,{id:1,area:N,x0:0,y0:0,x1:W-1,y1:W-1,count:false,sx:512,sy:512}];eligible=0;masks=new Map();lctx.clearRect(0,0,W,W);
   if(s){lctx.setLineDash([18,16]);lctx.strokeStyle='rgba(124,116,104,.35)';lctx.lineWidth=5;lctx.beginPath();lctx.moveTo(512,20);lctx.lineTo(512,W-20);
     if(s==='k'){lctx.moveTo(20,512);lctx.lineTo(W-20,512);lctx.moveTo(60,60);lctx.lineTo(W-60,W-60);lctx.moveTo(W-60,60);lctx.lineTo(60,W-60)}
@@ -574,21 +602,22 @@ function praiseKey(){if(used.rb)return'p_rainbow';if(used.pt)return'p_pattern';c
 
 /* 스티커 */
 function drawStickers(ctx,list){ctx.clearRect(0,0,W,W);ctx.textAlign='center';ctx.textBaseline='middle';
-  for(const s of list){ctx.save();ctx.translate(s.x,s.y);ctx.rotate(s.r);if(s.e.startsWith('img:')){const im=stkImg(s.e,()=>drawStickers(ctx,list));if(im.ok){const z=s.s*1.15;ctx.drawImage(im,-z/2,-z/2,z,z)}}
+  for(const s of list){ctx.save();ctx.translate(s.x,s.y);ctx.rotate(s.r);if(s.e.startsWith('my:')){const im=myImg(s.e,()=>drawStickers(ctx,list));if(im.ok){const z=s.s*1.6,k=im.width/im.height;ctx.drawImage(im,-z*Math.min(1,k)/2,-z/Math.max(1,k)/2,z*Math.min(1,k),z/Math.max(1,k))}}
+    else if(s.e.startsWith('img:')){const im=stkImg(s.e,()=>drawStickers(ctx,list));if(im.ok){const z=s.s*1.15;ctx.drawImage(im,-z/2,-z/2,z,z)}}
     else{ctx.font=`${s.s}px ${getComputedStyle(document.body).getPropertyValue('--emoji')}`;ctx.fillText(s.e,0,0)}ctx.restore()}}
 function placeSticker(x,y){const base=[75,120,185][sizeIdx];const s={e:stkPick,x,y,r:(Math.random()-.5)*.5,s:base},n=syms().length;
-  syms().forEach(T=>{const [px,py]=tx(T,x,y);stickers.push({...s,x:px,y:py,r:T[0]*T[3]-T[1]*T[2]<0?-s.r:s.r})});
+  const mine=[];syms().forEach(T=>{const [px,py]=tx(T,x,y),o={...s,x:px,y:py,r:T[0]*T[3]-T[1]*T[2]<0?-s.r:s.r};mine.push(o);stickers.push(o)});
   const t0=performance.now();(function grow(now){const k=Math.min(1,(now-t0)/260);const sc=k<.7?k/.7*1.25:1.25-(k-.7)/.3*.25;
-    const last=stickers.slice(-n);last.forEach(o=>o.s=base*sc);drawStickers(kctx,stickers);if(k<1)requestAnimationFrame(grow)})(t0);
+    mine.forEach(o=>o.s=base*sc);drawStickers(kctx,stickers);if(k<1)requestAnimationFrame(grow)})(t0);setTimeout(()=>{mine.forEach(o=>o.s=base);drawStickers(kctx,stickers)},300);
   tone(700,.12,'triangle',.12);setTimeout(()=>tone(1050,.1,'triangle',.08),70);sparkleAt(x,y,5);noteUse();afterChange()}
 
 /* 붓 손가락 이벤트 */
 const board=$('board');
-let bRect=null;function toXY(e){const b=bRect||cvP.getBoundingClientRect();return[(e.clientX-b.left)*W/b.width,(e.clientY-b.top)*W/b.height]}
+let bRect=null;function toXY(e){const b=bRect&&bRect.width?bRect:cvP.getBoundingClientRect();return[(e.clientX-b.left)*W/b.width,(e.clientY-b.top)*W/b.height]}
 let pend=[],rafOn=false;function flush(){rafOn=false;if(!cur){pend=[];return}for(const [x,y] of pend){seg2(cur.x,cur.y,x,y);cur.x=x;cur.y=y}pend=[]}
 let pointerId=null;
 board.addEventListener('pointerdown',e=>{if(!owner||pointerId!==null||celebrating)return;audio();
-  bRect=cvP.getBoundingClientRect();const [x,y]=toXY(e);hideHint();
+  bRect=cvP.getBoundingClientRect();const [x,y]=toXY(e);if(tool==='sticker'||tool==='fill')bRect=null;hideHint();
   if(tool==='sticker'){pushUndo();placeSticker(x,y);return}
   const id=regionAt(x,y);if(!id)return;pointerId=e.pointerId;try{board.setPointerCapture(e.pointerId)}catch(_){}
   pushUndo();
@@ -742,8 +771,8 @@ MAGICS.forEach(([k,ico,name],i)=>{const b=document.createElement('button');b.cla
   b.setAttribute('aria-pressed',k===magic);b.onclick=()=>{audio();magic=k;document.querySelectorAll('.mg').forEach(x=>x.setAttribute('aria-pressed',x===b));
     tone(560+i*70,.15,'triangle',.1)};$('magics').appendChild(b)});
 TOOLS.forEach(([k,ico,name])=>{const b=document.createElement('button');b.className='tool';b.textContent=ico;b.setAttribute('aria-label',name);
-  if(k!=='undo'&&k!=='reset'){b.dataset.k=k;b.setAttribute('aria-pressed',k===tool)}
-  b.onclick=()=>{audio();if(k==='undo'){undo();return}if(k==='reset'){resetPic();return}setTool(k);
+  if(k!=='undo'&&k!=='reset'&&k!=='tostk'){b.dataset.k=k;b.setAttribute('aria-pressed',k===tool)}
+  b.onclick=()=>{audio();if(k==='undo'){undo();return}if(k==='reset'){resetPic();return}if(k==='tostk'){makeMySticker();return}setTool(k);
     if(k==='fill'||k==='sticker')oneShot('sparkle',.6,.7);else oneShot(rubKind(),.8,.4)};$('tools').appendChild(b)});
 function selectColor(c,b,i){audio();color=c;if(tool==='eraser')setTool('brush');
   document.querySelectorAll('.crayon').forEach(x=>x.setAttribute('aria-pressed',x===b));tone(440+(i||0)*45,.15,'sine',.1);
@@ -779,11 +808,13 @@ drawPatButtons();
   b.onclick=()=>{audio();sizeIdx=i;store.set('size',i);document.querySelectorAll('.size').forEach(x=>x.setAttribute('aria-pressed',x===b));tone(380+i*160,.12,'sine',.1)};$('sizes').appendChild(b)});
 function buildStickers(){const fr=store.get('friends')||[],friends=STORY.filter(x=>fr.includes(x.id)).map(x=>x.f);
   const sets=STK_SETS.map(([n,l])=>[n,n==='그림'?IMG_STK:l]);if(friends.length)sets.splice(1,0,['친구',friends]);
+  const mine=Object.keys(mystk()).reverse().map(k=>'my:'+k);if(mine.length)sets.unshift(['내 그림',mine]);
   const tabs=$('stkTabs');tabs.innerHTML='';sets.forEach(([n])=>{const b=document.createElement('button');b.className='stk-tab';b.textContent=n;
     b.setAttribute('aria-pressed',n===stkTab);b.onclick=()=>{stkTab=n;buildStickers();tone(650,.08,'triangle',.08)};tabs.appendChild(b)});
   const list=(sets.find(x=>x[0]===stkTab)||sets[0])[1];const box=$('stkGrid');box.innerHTML='';
   list.forEach(e=>{const b=document.createElement('button');b.className='stk-b';b.setAttribute('aria-label','스티커');
-    if(e.startsWith('img:')){const im=document.createElement('img');im.src=`img/stk/${e.slice(4)}.png`;im.alt='';im.onerror=()=>b.remove();b.appendChild(im)}else b.textContent=e;
+    if(e.startsWith('my:')){const im=document.createElement('img');im.src=mystk()[e.slice(3)]||'';im.alt='';b.appendChild(im)}
+    else if(e.startsWith('img:')){const im=document.createElement('img');im.src=`img/stk/${e.slice(4)}.png`;im.alt='';im.onerror=()=>b.remove();b.appendChild(im)}else b.textContent=e;
     b.setAttribute('aria-pressed',e===stkPick);b.onclick=()=>{stkPick=e;box.querySelectorAll('.stk-b').forEach(x=>x.setAttribute('aria-pressed',x===b));tone(800,.1,'triangle',.1)};box.appendChild(b)})}
 buildStickers();
 
