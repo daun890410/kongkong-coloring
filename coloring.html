@@ -92,8 +92,23 @@ h2 .link{margin-left:auto;font-size:18px;background:#fff;border-radius:999px;pad
 .bubble b{font-family:var(--display);font-weight:normal;color:var(--leaf)}
 .bubble .tip{display:block;margin-top:2px;font-size:13px;line-height:1.35;color:var(--mute)}
 .stage{grid-area:stage;position:relative;display:flex;align-items:center;justify-content:center;min-height:0}
-.board{position:relative;background:#fff;border-radius:26px;box-shadow:0 6px 0 var(--edge);overflow:hidden;touch-action:none;max-width:100%}
+.board{position:absolute;inset:0;overflow:hidden;touch-action:none}
+/* 늘어나는 그림판: world = 타일(1024 칸)들을 이어 붙인 큰 도화지 · 확대/이동은 transform 으로 */
+.world{position:absolute;left:0;top:0;transform-origin:0 0;background:#fff;border-radius:44px;box-shadow:0 10px 0 var(--edge);overflow:hidden}
+.world.glide{transition:transform .35s ease}
+.tile{position:absolute;width:1024px;height:1024px}
 .board canvas{position:absolute;inset:0;width:100%;height:100%}
+.tool svg{width:76%;height:76%;display:block}
+.zoom{position:absolute;left:8px;bottom:8px;display:flex;flex-direction:column;gap:6px;z-index:2}
+.zoom button{width:44px;height:44px;border-radius:50%;background:var(--paper);font-size:24px;box-shadow:0 3px 0 var(--edge);display:grid;place-items:center;font-family:var(--emoji);opacity:.92}
+.card.add{width:min(92vw,620px)}.card.add .pt{font-family:var(--hand);font-size:21px;color:var(--ink);margin:0}
+.addtabs{display:flex;gap:6px;overflow-x:auto;max-width:100%;padding:2px;scrollbar-width:none}
+.addtabs button{flex:0 0 auto;border-radius:999px;background:#fff;padding:6px 12px;font-family:var(--hand);font-size:17px;box-shadow:0 3px 0 var(--edge)}
+.addtabs button[aria-pressed="true"]{background:var(--sun)}
+.addgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;width:100%;max-height:52vh;overflow-y:auto;padding:2px}
+.addgrid button{background:#fff;border-radius:16px;box-shadow:0 3px 0 var(--edge);padding:4px;display:flex;flex-direction:column;align-items:center;font-family:var(--hand);font-size:14px;color:var(--mute)}
+.viewer .addgrid img{width:100%;aspect-ratio:1;max-height:none;object-fit:contain;border-radius:10px}
+.addgrid .big{font-size:52px;aspect-ratio:1;display:grid;place-items:center;font-family:var(--emoji)}
 .board .lines,.board .stk,.board .anim{pointer-events:none}
 .board .anim{opacity:0}
 .board .anim.on{opacity:1}
@@ -263,9 +278,10 @@ KKL.set(.08);setTimeout(()=>KKL.set(1),9000);</script>
   </div>
   <div class="stage" id="stage">
     <div class="board loading" id="board">
-      <canvas id="cvPaint"></canvas><canvas id="cvLines" class="lines"></canvas><canvas id="cvStk" class="stk"></canvas><canvas id="cvAnim" class="anim"></canvas>
+      <div class="world" id="world"><canvas id="cvStk" class="stk"></canvas><canvas id="cvAnim" class="anim"></canvas></div>
     </div>
     <canvas class="fx" id="fx"></canvas>
+    <div class="zoom"><button data-z="in" aria-label="크게 보기">＋</button><button data-z="out" aria-label="작게 보기">－</button><button data-z="fit" aria-label="전체 보기">🖼️</button></div>
     <button class="next" id="nextBtn" hidden>다 했어! ⭐</button>
     <div class="award" id="award" hidden></div>
   </div>
@@ -297,6 +313,12 @@ KKL.set(.08);setTimeout(()=>KKL.set(1),9000);</script>
   <canvas id="pkHue" width="600" height="300"></canvas>
   <canvas id="pkGray" width="600" height="60"></canvas>
   <div class="prow"><span class="pv" id="pkPrev"></span><button class="bigbtn" id="pkUse">이 색으로 칠하기</button><button class="who" id="pkClose">닫기</button></div>
+</div></div>
+<div class="viewer" id="addPick" hidden><div class="card add">
+  <p class="pt">어떤 그림을 옆에 붙일까요?</p>
+  <div class="addtabs" id="addTabs"></div>
+  <div class="addgrid" id="addGrid"></div>
+  <button class="who" id="addClose">닫기</button>
 </div></div>
 <div class="viewer" id="viewer" hidden><div class="card"><img id="viewImg" alt="내가 칠한 그림"><p>휴대폰 · 태블릿: 그림을 길게 누르면 사진으로 저장돼요</p><button class="bigbtn" id="viewClose">닫기</button></div></div>
 
@@ -333,7 +355,14 @@ const PRAISE={p_c1:'한 가지 색으로 꼼꼼하게 칠했네!',p_c2:'두 가�
  p_pattern:'무늬로도 칠했네! 멋진 생각이야!',p_rainbow:'무지개로 칠했구나! 반짝반짝 멋지다!',p_full:'끝까지 다 칠했어! 정말 열심히 했다!'};
 const COLORS=[['#ff4b4b','빨강'],['#ff9a1f','주황'],['#ffd400','노랑'],['#8ad13f','연두'],['#22a85a','초록'],['#4cc3ff','하늘색'],
  ['#2f6bff','파랑'],['#8b5cf6','보라'],['#ff7eb6','분홍'],['#a0643c','갈색'],['#ffc9a3','살구색'],['#4a4a4a','까망']];
-const TOOLS=[['brush','🖌️','붓'],['crayon','🖍️','크레용'],['glitter','✨','반짝이'],['magic','🪄','마법 붓'],['fill','🪣','톡 채우기'],['sticker','🌟','스티커'],['eraser','🧽','지우개'],['wipe','🧼','칸 지우기'],['undo','↩️','되돌리기'],['tostk','🏷️','스티커로 만들기'],['reset','🔄','이 그림 처음부터']];
+/* 도구 그림 (다운 2026-10-22 「좀 더 직관적으로」): 되돌리기 = 뒤로 굽은 화살표 · 스티커로 만들기 = 귀퉁이가 들린 별 스티커 ·
+   처음부터 = 반짝이는 새 종이 · 지우개 = 진짜 지우개 */
+const ICO={
+ undo:'<svg viewBox="0 0 48 48"><path d="M17 15h13a11 11 0 0 1 0 22H17" fill="none" stroke="#2f6bff" stroke-width="7" stroke-linecap="round"/><path d="M21 4 7 15l14 11z" fill="#2f6bff" stroke="#2f6bff" stroke-width="3" stroke-linejoin="round"/></svg>',
+ tostk:'<svg viewBox="0 0 48 48"><path d="M7 7h34v23L30 41H7z" fill="#fff" stroke="#4a4a4a" stroke-width="3" stroke-linejoin="round"/><path d="M41 30H30v11z" fill="#ffd400" stroke="#4a4a4a" stroke-width="3" stroke-linejoin="round"/><path d="m22 10 3.5 7 7.5 1-5.5 5.2 1.4 7.6L22 27.2l-6.9 3.6 1.4-7.6L11 18l7.5-1z" fill="#ff7eb6" stroke="#e0508e" stroke-width="1.5" stroke-linejoin="round"/></svg>',
+ reset:'<svg viewBox="0 0 48 48"><path d="M10 5h20l9 9v29H10z" fill="#fff" stroke="#4a4a4a" stroke-width="3" stroke-linejoin="round"/><path d="M30 5v9h9" fill="none" stroke="#4a4a4a" stroke-width="3" stroke-linejoin="round"/><path d="m24 18 2.4 6 6 2.4-6 2.4-2.4 6-2.4-6-6-2.4 6-2.4z" fill="#ffd400" stroke="#e0a514" stroke-width="1.2" stroke-linejoin="round"/><path d="m15 32 1.2 3 3 1.2-3 1.2-1.2 3-1.2-3-3-1.2 3-1.2z" fill="#4cc3ff"/><path d="m33 31 1 2.4 2.4 1-2.4 1-1 2.4-1-2.4-2.4-1 2.4-1z" fill="#ff7eb6"/></svg>',
+ eraser:'<svg viewBox="0 0 48 48"><g transform="rotate(-32 24 22)"><rect x="5" y="14" width="38" height="17" rx="4" fill="#ff9ec4" stroke="#4a4a4a" stroke-width="3"/><path d="M27 14v17" stroke="#4a4a4a" stroke-width="3"/><path d="M9 18h15" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".7"/></g><path d="M7 43h12M24 43h6" stroke="#b9b0a4" stroke-width="3" stroke-linecap="round"/></svg>'};
+const TOOLS=[['addpic','➕','그림 더하기'],['brush','🖌️','붓'],['crayon','🖍️','크레용'],['glitter','✨','반짝이'],['magic','🪄','마법 붓'],['fill','🪣','톡 채우기'],['sticker','🌟','스티커'],['eraser',ICO.eraser,'지우개'],['wipe','🧼','칸 지우기'],['undo',ICO.undo,'되돌리기'],['tostk',ICO.tostk,'스티커로 만들기'],['reset',ICO.reset,'이 그림 처음부터']];
 const STK_SETS=[['반짝',['⭐','🌟','✨','💖','❤️','🌈','🎀','👑','💎','🫧','🌙','☀️']],
  ['그림',[]],
  ['동물',['🐶','🐱','🐰','🐻','🐼','🦁','🐯','🐸','🐥','🐧','🦄','🐞','🦋','🐝','🐠','🐳','🦖','🐢']],
@@ -355,13 +384,13 @@ function makeMySticker(){if(!owner||celebrating)return;
   for(let i=0;i<N;i++){const on=bgId?(owner[i]!==bgId||isBar[i]):(pd[i*4+3]>20);if(on){md.data[i*4+3]=255;any++}}
   if(bgId)for(let i=0;i<N;i++)if(owner[i]===bgId&&!isBar[i])md.data[i*4+3]=0;
   mx.putImageData(md,0,0);
-  if(!bgId&&stickers.length){mx.globalCompositeOperation='source-over';mx.drawImage(cvS,0,0)}
+  if(!bgId&&stickers.length){mx.globalCompositeOperation='source-over';mx.drawImage(cvS,-TL.ox,-TL.oy)}
   if(!any&&!stickers.length){tone(220,.2);return}
   const out=document.createElement('canvas');out.width=out.height=W;const ox=out.getContext('2d');
   for(let a=0;a<16;a++){const t=a*Math.PI/8;ox.drawImage(m,Math.cos(t)*14,Math.sin(t)*14)}
   ox.globalCompositeOperation='source-in';ox.fillStyle='#fff';ox.fillRect(0,0,W,W);
   const t=document.createElement('canvas');t.width=t.height=W;const tx2=t.getContext('2d');
-  tx2.fillStyle='#fff';tx2.fillRect(0,0,W,W);tx2.drawImage(cvP,0,0);tx2.drawImage(cvL,0,0);tx2.drawImage(cvS,0,0);
+  tx2.fillStyle='#fff';tx2.fillRect(0,0,W,W);tx2.drawImage(cvP,0,0);tx2.drawImage(cvL,0,0);tx2.drawImage(cvS,-TL.ox,-TL.oy);
   tx2.globalCompositeOperation='destination-in';tx2.drawImage(m,0,0);
   ox.globalCompositeOperation='source-over';ox.drawImage(t,0,0);
   const a=ox.getImageData(0,0,W,W).data;let x0=W,y0=W,x1=0,y1=0;
@@ -372,7 +401,7 @@ function makeMySticker(){if(!owner||celebrating)return;
   const id=Date.now().toString(36),all=mystk(),keys=Object.keys(all);all[id]=url;while(keys.length>=20){delete all[keys.shift()]}
   store.set('mystk',all);if(!store.get('mystk')||!store.get('mystk')[id]){setBubble('저장할 자리가 모자라요. 「내 그림」 스티커를 몇 개 지워 주세요.');return}
   stkTab='내 그림';stkPick='my:'+id;setTool('sticker');buildStickers();
-  setBubble('<b>내 그림 스티커</b>가 생겼어요! 🌟 이제 아무 그림에나 톡 붙여 봐요.');oneShot('sparkle',.9);sparkleAt(512,512,14)}
+  setBubble('<b>내 그림 스티커</b>가 생겼어요! 🌟 이제 아무 그림에나 톡 붙여 봐요.');oneShot('sparkle',.9);sparkleAt(TL.ox+512,TL.oy+512,14)}
 const src=id=>`img/${id}.png`;
 let CATS=[],FLAGTIP={},curCat=null;
 fetch('tales/cats.json').then(r=>r.json()).then(j=>{KKL.step();CATS=j.cats;FREE=CATS.flatMap(c=>c.items);FLAGTIP=j.flagTip||{};if(!$('home').hidden)renderHome()}).catch(()=>{});
@@ -458,10 +487,45 @@ document.addEventListener('pointerdown',()=>{if(BGM.on&&(!BGM.el||BGM.el.paused)
 
 /* ───────── 색칠 엔진: 선 안쪽만 칠해지는 손가락 붓 ───────── */
 const W=1024,N=W*W;
-const cvP=$('cvPaint'),cvL=$('cvLines'),cvS=$('cvStk'),cvA=$('cvAnim');[cvP,cvL,cvS,cvA].forEach(c=>c.width=c.height=W);
-const pctx=cvP.getContext('2d'),lctx=cvL.getContext('2d'),kctx=cvS.getContext('2d'),actx=cvA.getContext('2d');
+const cvS=$('cvStk'),cvA=$('cvAnim'),world=$('world');[cvS,cvA].forEach(c=>c.width=c.height=W);
+const kctx=cvS.getContext('2d'),actx=cvA.getContext('2d');
 const scr=document.createElement('canvas');scr.width=scr.height=W;const sctx=scr.getContext('2d');
 let owner,isBar,R=[],eligible=0,masks=new Map(),done={},pic=null,undoStack=[],stickers=[],used={c:[],pt:false,rb:false},sym='';
+/* 늘어나는 그림판: 판 = 타일(1024 칸) 여러 장. 타일 하나가 예전의 판 하나와 같다.
+   엔진(analyze · mask · seg …)은 「지금 타일」 하나만 보고, useTile 이 그 타일의 칸 정보 · 캔버스를 위 변수들에 걸어 준다.
+   스티커(cvS) · 살아 움직이기(cvA)는 판 전체(world) 좌표 하나로 쓴다. */
+const COLS=3,MAXT=6;
+let tiles=[],TL=null,cvP=null,cvL=null,pctx=null,lctx=null,openTok=0;
+function sync(){if(TL){TL.done=done;TL.masks=masks;TL.glowCache=glowCache}}
+function useTile(t){sync();TL=t;if(!t)return;({owner,isBar,R,eligible,bgId,masks,done,sym,glowCache}=t);cvP=t.cvP;cvL=t.cvL;pctx=t.pctx;lctx=t.lctx}
+function grab(t){Object.assign(t,{owner,isBar,R,eligible,bgId,masks,done,sym,glowCache})}
+function newTile(id,col,row){const t={id,col,row,ox:col*W,oy:row*W,owner:null,isBar:null,R:[],eligible:0,bgId:0,masks:new Map(),done:{},sym:'',glowCache:new Map()};
+  t.el=document.createElement('div');t.el.className='tile';t.el.style.left=t.ox+'px';t.el.style.top=t.oy+'px';
+  t.cvP=document.createElement('canvas');t.cvL=document.createElement('canvas');t.cvL.className='lines';
+  [t.cvP,t.cvL].forEach(c=>{c.width=c.height=W;t.el.appendChild(c)});t.pctx=t.cvP.getContext('2d');t.lctx=t.cvL.getContext('2d');
+  world.insertBefore(t.el,cvS);tiles.push(t);layout();return t}
+function clearTiles(){tiles.forEach(t=>t.el.remove());tiles=[];TL=null}
+function dropTile(t){const n=tiles.indexOf(t);if(n<1)return;t.el.remove();tiles.splice(n,1);if(TL===t){TL=null;useTile(tiles[0])}
+  if(pic)store.del(`pic:${pic}~${n}`);layout();fitView(true)}
+const tileAt=(x,y)=>tiles.find(t=>x>=t.ox&&y>=t.oy&&x<t.ox+W&&y<t.oy+W);
+const worldW=()=>Math.max(1,...tiles.map(t=>t.col+1))*W,worldH=()=>Math.max(1,...tiles.map(t=>t.row+1))*W;
+function layout(){const ww=worldW(),wh=worldH();world.style.width=ww+'px';world.style.height=wh+'px';
+  if(cvS.width!==ww||cvS.height!==wh){cvS.width=ww;cvS.height=wh;drawStickers(kctx,stickers)}
+  const k=Math.min(1,1600/Math.max(ww,wh)),aw=Math.round(ww*k),ah=Math.round(wh*k);if(cvA.width!==aw||cvA.height!==ah){cvA.width=aw;cvA.height=ah}}
+/* 보기: 처음엔 판 전체가 화면에 들어오게 · 두 손가락 = 확대/축소/이동 · 한 손가락은 늘 칠하기 */
+const VIEW={x:0,y:0,s:1,auto:true};let glideT;
+function applyView(){world.style.transform=`translate(${VIEW.x}px,${VIEW.y}px) scale(${VIEW.s})`}
+function fitScale(){const b=board.getBoundingClientRect();return Math.min(b.width/worldW(),b.height/worldH())*.98}
+function glide(on){if(!on)return;world.classList.add('glide');clearTimeout(glideT);glideT=setTimeout(()=>world.classList.remove('glide'),400)}
+function fitView(g){const b=board.getBoundingClientRect();if(!b.width)return;const s=fitScale();
+  VIEW.s=s;VIEW.x=(b.width-worldW()*s)/2;VIEW.y=(b.height-worldH()*s)/2;VIEW.auto=true;glide(g);applyView()}
+function clampView(){const b=board.getBoundingClientRect(),fs=fitScale();VIEW.s=Math.max(fs,Math.min(Math.max(fs,2),VIEW.s));
+  const ww=worldW()*VIEW.s,wh=worldH()*VIEW.s,m=60;
+  VIEW.x=ww<=b.width?(b.width-ww)/2:Math.min(m,Math.max(b.width-ww-m,VIEW.x));
+  VIEW.y=wh<=b.height?(b.height-wh)/2:Math.min(m,Math.max(b.height-wh-m,VIEW.y))}
+const clampS=s=>{const fs=fitScale();return Math.max(fs,Math.min(Math.max(fs,2),s))};
+function zoomAt(f,cx,cy,g){const s0=VIEW.s;VIEW.s=clampS(s0*f);const k=VIEW.s/s0;
+  VIEW.x=cx-(cx-VIEW.x)*k;VIEW.y=cy-(cy-VIEW.y)*k;VIEW.auto=false;clampView();glide(g);applyView()}
 /* 거울(좌우) · 만화경(여덟 갈래): 가운데를 기준으로 뒤집는 행렬들 */
 const SYMS={'':[[1,0,0,1]],m:[[1,0,0,1],[-1,0,0,1]],
   k:[[1,0,0,1],[-1,0,0,1],[1,0,0,-1],[-1,0,0,-1],[0,1,1,0],[0,-1,1,0],[0,1,-1,0],[0,-1,-1,0]]};
@@ -622,72 +686,102 @@ function topColor(){if(!used.c.length)return 'x';const pal=used.c.map(i=>hex(COL
 function praiseKey(){if(used.rb)return'p_rainbow';if(used.pt)return'p_pattern';const n=used.c.length;return n?'p_c'+Math.min(n,6):'p_full'}
 
 /* 스티커 */
-function drawStickers(ctx,list){ctx.clearRect(0,0,W,W);ctx.textAlign='center';ctx.textBaseline='middle';
+function drawStickers(ctx,list){ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);ctx.textAlign='center';ctx.textBaseline='middle';
   for(const s of list){ctx.save();ctx.translate(s.x,s.y);ctx.rotate(s.r);if(s.e.startsWith('my:')){const im=myImg(s.e,()=>drawStickers(ctx,list));if(im.ok){const z=s.s*1.6,k=im.width/im.height;ctx.drawImage(im,-z*Math.min(1,k)/2,-z/Math.max(1,k)/2,z*Math.min(1,k),z/Math.max(1,k))}}
     else if(s.e.startsWith('img:')){const im=stkImg(s.e,()=>drawStickers(ctx,list));if(im.ok){const z=s.s*1.15;ctx.drawImage(im,-z/2,-z/2,z,z)}}
     else{ctx.font=`${s.s}px ${getComputedStyle(document.body).getPropertyValue('--emoji')}`;ctx.fillText(s.e,0,0)}ctx.restore()}}
 /* 붙인 스티커 잡기: 누른 곳에 있는 가장 위 스티커 */
 let drag=null;
 function hitSticker(x,y){for(let i=stickers.length-1;i>=0;i--){const s=stickers[i];if(Math.hypot(s.x-x,s.y-y)<s.s*(s.e.startsWith('my:')?.75:.55))return s}return null}
-function placeSticker(x,y){const base=[75,120,185][sizeIdx];const s={e:stkPick,x,y,r:(Math.random()-.5)*.5,s:base},n=syms().length;
-  const mine=[];syms().forEach(T=>{const [px,py]=tx(T,x,y),o={...s,x:px,y:py,r:T[0]*T[3]-T[1]*T[2]<0?-s.r:s.r};mine.push(o);stickers.push(o)});
+/* 스티커 지우기 (다운 2026-10-22): 🧽 지우개로 문지르거나 🧼 칸 지우기로 톡 누르면 그 스티커가 사라진다 · 되돌리기로 다시 살아남 */
+function removeSticker(s){stickers=stickers.filter(o=>o!==s);drawStickers(kctx,stickers);oneShot('erase',.7,.35);tone(520,.1,'sine',.08);sparkleAt(s.x,s.y,4);afterChange()}
+function placeSticker(x,y){const base=[75,120,185][sizeIdx];const s={e:stkPick,x,y,r:(Math.random()-.5)*.5,s:base};
+  // 거울 · 만화경 타일 위면 그 타일 가운데를 기준으로 따라 붙인다
+  const t=tileAt(x,y),ox=t?t.ox:0,oy=t?t.oy:0,S=SYMS[t?t.sym:''];
+  const mine=[];S.forEach(M=>{const [px,py]=tx(M,x-ox,y-oy),o={...s,x:px+ox,y:py+oy,r:M[0]*M[3]-M[1]*M[2]<0?-s.r:s.r};mine.push(o);stickers.push(o)});
   const t0=performance.now();(function grow(now){const k=Math.min(1,(now-t0)/260);const sc=k<.7?k/.7*1.25:1.25-(k-.7)/.3*.25;
     mine.forEach(o=>o.s=base*sc);drawStickers(kctx,stickers);if(k<1)requestAnimationFrame(grow)})(t0);setTimeout(()=>{mine.forEach(o=>o.s=base);drawStickers(kctx,stickers)},300);
   tone(700,.12,'triangle',.12);setTimeout(()=>tone(1050,.1,'triangle',.08),70);sparkleAt(x,y,5);noteUse();afterChange()}
 
-/* 붓 손가락 이벤트 */
+/* 붓 손가락 이벤트 — 좌표는 판 전체(world) 기준, 칠할 때는 누른 타일 안 좌표로 바꿔 엔진에 넘긴다 */
 const board=$('board');
-let bRect=null;function toXY(e){const b=bRect&&bRect.width?bRect:cvP.getBoundingClientRect();return[(e.clientX-b.left)*W/b.width,(e.clientY-b.top)*W/b.height]}
+let vRect=null;function toXY(e){const b=vRect||board.getBoundingClientRect();return[(e.clientX-b.left-VIEW.x)/VIEW.s,(e.clientY-b.top-VIEW.y)/VIEW.s]}
 let pend=[],rafOn=false;function flush(){rafOn=false;if(!cur){pend=[];return}for(const [x,y] of pend){seg2(cur.x,cur.y,x,y);cur.x=x;cur.y=y}pend=[]}
 let pointerId=null;
-board.addEventListener('pointerdown',e=>{if(!owner||pointerId!==null||celebrating)return;audio();
-  bRect=cvP.getBoundingClientRect();const [x,y]=toXY(e);if(tool==='sticker'||tool==='fill'||tool==='wipe')bRect=null;hideHint();
-  if(tool==='sticker'){pushUndo();const hit=hitSticker(x,y);
-    if(hit){drag={s:hit,dx:hit.x-x,dy:hit.y-y};pointerId=e.pointerId;bRect=cvP.getBoundingClientRect();try{board.setPointerCapture(e.pointerId)}catch(_){}hit.s*=1.12;drawStickers(kctx,stickers);tone(620,.08,'triangle',.08);return}
-    placeSticker(x,y);return}
-  const id=regionAt(x,y);if(!id)return;pointerId=e.pointerId;try{board.setPointerCapture(e.pointerId)}catch(_){}
-  pushUndo();
-  if(tool==='wipe'){pointerId=null;bRect=null;wipeRegion(id);const seen=[id];
-    syms().slice(1).forEach(T=>{const [px,py]=tx(T,x,y),o=regionAt(px,py);if(o&&!seen.includes(o)){seen.push(o);wipeRegion(o)}});return}
-  if(tool==='fill'){pointerId=null;noteUse();magicFill(id,x,y);const seen=[id];
-    syms().slice(1).forEach(T=>{const [px,py]=tx(T,x,y),o=regionAt(px,py);if(o&&!seen.includes(o)){seen.push(o);magicFill(o,px,py)}});return}
-  noteUse();cur={r:id,x,y};mAcc=MAGICS.find(m=>m[0]===magic)[3];mN=0;seg2(x,y,x,y);rub()});
-board.addEventListener('pointermove',e=>{if(drag&&e.pointerId===pointerId){const [x,y]=toXY(e);drag.s.x=Math.max(0,Math.min(W,x+drag.dx));drag.s.y=Math.max(0,Math.min(W,y+drag.dy));drawStickers(kctx,stickers);return}
+/* 두 손가락: 확대 · 축소 · 이동. 두 번째 손가락이 닿으면 첫 손가락이 막 칠한 것은 조용히 되돌린다 */
+const ptrs=new Map();let pinch=null,hold=false,downAt=0,downMark=-1;
+function cancelTouch(){const fresh=performance.now()-downAt<400;
+  if((cur||drag||fresh)&&undoStack.length===downMark)undo(true);
+  if(cur)stopRub(true);cur=null;drag=null;pend=[];pointerId=null;vRect=null;downMark=-1;hold=true;hideHint()}
+function pinchStart(){const [a,b]=[...ptrs.values()],r=board.getBoundingClientRect();
+  pinch={r,d:Math.hypot(a.x-b.x,a.y-b.y)||1,mx:(a.x+b.x)/2-r.left,my:(a.y+b.y)/2-r.top,s:VIEW.s,vx:VIEW.x,vy:VIEW.y}}
+function pinchMove(){const [a,b]=[...ptrs.values()],p=pinch,d=Math.hypot(a.x-b.x,a.y-b.y)||1,mx=(a.x+b.x)/2-p.r.left,my=(a.y+b.y)/2-p.r.top;
+  const s=clampS(p.s*d/p.d),wx=(p.mx-p.vx)/p.s,wy=(p.my-p.vy)/p.s;VIEW.s=s;VIEW.x=mx-wx*s;VIEW.y=my-wy*s;VIEW.auto=false;clampView();applyView()}
+board.addEventListener('pointerdown',e=>{ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size>=2){cancelTouch();if(ptrs.size===2)pinchStart();return}
+  if(hold||!TL||pointerId!==null||celebrating)return;audio();
+  vRect=board.getBoundingClientRect();const [x,y]=toXY(e);hideHint();downAt=performance.now();
+  if(tool==='sticker'){if(x<0||y<0||x>worldW()||y>worldH()){vRect=null;return}pushUndo([]);downMark=undoStack.length;const hit=hitSticker(x,y);
+    if(hit){drag={s:hit,dx:hit.x-x,dy:hit.y-y};pointerId=e.pointerId;try{board.setPointerCapture(e.pointerId)}catch(_){}hit.s*=1.12;drawStickers(kctx,stickers);tone(620,.08,'triangle',.08);return}
+    vRect=null;placeSticker(x,y);return}
+  const sh=(tool==='wipe'||tool==='eraser')&&hitSticker(x,y);
+  if(sh&&tool==='wipe'){vRect=null;pushUndo([]);downMark=undoStack.length;removeSticker(sh);return}
+  const t=tileAt(x,y),id=t&&t.owner?(useTile(t),regionAt(x-t.ox,y-t.oy)):0;
+  if(!id){vRect=null;if(sh){pushUndo([]);downMark=undoStack.length;removeSticker(sh)}return}const lx=x-t.ox,ly=y-t.oy;pointerId=e.pointerId;try{board.setPointerCapture(e.pointerId)}catch(_){}
+  pushUndo();downMark=undoStack.length;
+  if(tool==='wipe'||tool==='fill'){pointerId=null;vRect=null;const f=tool==='wipe'?wipeRegion:magicFill;if(tool==='fill')noteUse();f(id,lx,ly);const seen=[id];
+    syms().slice(1).forEach(M=>{const [px,py]=tx(M,lx,ly),o=regionAt(px,py);if(o&&!seen.includes(o)){seen.push(o);f(o,px,py)}});return}
+  if(sh)removeSticker(sh);
+  noteUse();cur={r:id,x:lx,y:ly,t};mAcc=MAGICS.find(m=>m[0]===magic)[3];mN=0;seg2(lx,ly,lx,ly);rub()});
+board.addEventListener('pointermove',e=>{if(ptrs.has(e.pointerId))ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinch){if(ptrs.size>=2)pinchMove();return}
+  if(drag&&e.pointerId===pointerId){const [x,y]=toXY(e);drag.s.x=Math.max(0,Math.min(worldW(),x+drag.dx));drag.s.y=Math.max(0,Math.min(worldH(),y+drag.dy));drawStickers(kctx,stickers);return}
   if(!cur||e.pointerId!==pointerId)return;
-  const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];for(const ev of evs.length?evs:[e])pend.push(toXY(ev));
+  const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];for(const ev of evs.length?evs:[e]){const [x,y]=toXY(ev);pend.push([x-cur.t.ox,y-cur.t.oy]);if(tool==='eraser'){const h=hitSticker(x,y);if(h)removeSticker(h)}}
   if(!rafOn){rafOn=true;requestAnimationFrame(flush)}rub()});
-const endStroke=e=>{if(drag&&e.pointerId===pointerId){drag.s.s/=1.12;drag=null;pointerId=null;bRect=null;drawStickers(kctx,stickers);tone(480,.08,'triangle',.07);afterChange();return}
-  if(!cur||e.pointerId!==pointerId)return;flush();bRect=null;stopRub();const id=cur.r;cur=null;pointerId=null;
+const endStroke=e=>{ptrs.delete(e.pointerId);if(pinch&&ptrs.size<2)pinch=null;if(!ptrs.size)hold=false;
+  if(drag&&e.pointerId===pointerId){drag.s.s/=1.12;drag=null;pointerId=null;vRect=null;drawStickers(kctx,stickers);tone(480,.08,'triangle',.07);afterChange();return}
+  if(!cur||e.pointerId!==pointerId)return;flush();vRect=null;stopRub();const id=cur.r;cur=null;pointerId=null;
   if(R[id].count){const cov=coverage(id);if(cov>=.6){if(!done[id])tone(880,.15,'triangle',.06);done[id]=1}else delete done[id]}
   drewSomething=true;afterChange()};
 board.addEventListener('pointerup',endStroke);board.addEventListener('pointercancel',endStroke);
+board.addEventListener('wheel',e=>{e.preventDefault();const b=board.getBoundingClientRect();zoomAt(Math.exp(-e.deltaY*.0015),e.clientX-b.left,e.clientY-b.top)},{passive:false});
+document.querySelectorAll('.zoom button').forEach(b=>b.onclick=()=>{audio();const r=board.getBoundingClientRect(),z=b.dataset.z;
+  if(z==='fit')fitView(true);else zoomAt(z==='in'?1.5:1/1.5,r.width/2,r.height/2,true);tone(z==='out'?440:z==='in'?660:550,.1,'triangle',.08)});
 
-function magicFill(id,x,y){if(!id)return;const r=R[id],m=mask(id),maxR=Math.hypot(Math.max(x-r.x0,r.x1-x),Math.max(y-r.y0,r.y1-y))+4;
-  const base=pctx.getImageData(m.x,m.y,m.w,m.h);const t0=performance.now(),dur=420;oneShot('sparkle',.8);
-  if(r.count)done[id]=1;let fin=false;setTimeout(()=>{if(!fin)step(t0+dur)},dur+150);
+const fills=new Set();
+function magicFill(id,x,y){if(!id)return;const T=TL,P=pctx,r=R[id],m=mask(id),maxR=Math.hypot(Math.max(x-r.x0,r.x1-x),Math.max(y-r.y0,r.y1-y))+4;
+  const base=P.getImageData(m.x,m.y,m.w,m.h);const t0=performance.now(),dur=420;oneShot('sparkle',.8);
+  if(r.count)done[id]=1;let fin=false;const stop=()=>{fin=true};fills.add(stop);setTimeout(()=>{if(!fin)step(t0+dur)},dur+150);
   const style=pattern==='rainbow'?patTile('stripes6',color):pattern!=='none'?patTile(pattern,color):color;
-  function step(now){if(fin)return;const k=Math.max(0,Math.min(1,(now-t0)/dur)),rad=maxR*(1-Math.pow(1-k,3));pctx.putImageData(base,m.x,m.y);
+  function step(now){if(fin)return;const k=Math.max(0,Math.min(1,(now-t0)/dur)),rad=maxR*(1-Math.pow(1-k,3));P.putImageData(base,m.x,m.y);
     sctx.save();sctx.clearRect(m.x,m.y,m.w,m.h);sctx.fillStyle=style;sctx.beginPath();sctx.arc(x,y,rad,0,7);sctx.fill();
     sctx.globalCompositeOperation='destination-in';sctx.drawImage(m.c,m.x,m.y);sctx.restore();
-    pctx.drawImage(scr,m.x,m.y,m.w,m.h,m.x,m.y,m.w,m.h);
-    if(k<1)requestAnimationFrame(step);else{fin=true;sparkleAt(r.sx,r.sy,6);drewSomething=true;afterChange()}}step(t0)}
+    P.drawImage(scr,m.x,m.y,m.w,m.h,m.x,m.y,m.w,m.h);
+    if(k<1)requestAnimationFrame(step);else{fin=true;fills.delete(stop);sparkleAt(r.sx+T.ox,r.sy+T.oy,6);drewSomething=true;afterChange()}}step(t0)}
 
 /* 한 칸만 완전히 처음으로 (톡 누른 칸의 색을 모두 지운다) */
 function wipeRegion(id){if(!id)return;const m=mask(id);pctx.globalCompositeOperation='destination-out';pctx.drawImage(m.c,m.x,m.y);pctx.globalCompositeOperation='source-over';
   delete done[id];oneShot('erase',.8,.4);tone(420,.15,'sine',.08);afterChange()}
-function pushUndo(){const cv=document.createElement('canvas');cv.width=cv.height=W;cv.getContext('2d').drawImage(cvP,0,0);undoStack.push({cv,done:{...done},stk:stickers.map(s=>({...s})),used:JSON.parse(JSON.stringify(used))});if(undoStack.length>10)undoStack.shift()}
-function undo(){const u=undoStack.pop();if(!u){tone(220,.15);return}pctx.clearRect(0,0,W,W);pctx.drawImage(u.cv,0,0);done=u.done;stickers=u.stk;if(u.used)used=u.used;drawStickers(kctx,stickers);tone(330,.18,'sine',.12);afterChange(true)}
+/* 되돌리기: 바뀐 타일만 저장 (타일이 여럿이라 메모리 아끼기) · 최대 6번. 그림 더하기도 되돌리면 그 타일이 빠진다 */
+function pushUndo(ts,add){sync();ts=ts||[TL];
+  undoStack.push({add,ts:ts.map(t=>{t.dirty=true;const cv=document.createElement('canvas');cv.width=cv.height=W;cv.getContext('2d').drawImage(t.cvP,0,0);return{t,cv,done:{...t.done}}}),
+    stk:stickers.map(s=>({...s})),used:JSON.parse(JSON.stringify(used))});if(undoStack.length>6)undoStack.shift()}
+function undo(quiet){const u=undoStack.pop();if(!u){if(!quiet)tone(220,.15);return}fills.forEach(f=>f());fills.clear();
+  if(u.add)dropTile(u.add);
+  u.ts.forEach(({t,cv,done:d})=>{if(!tiles.includes(t))return;t.pctx.clearRect(0,0,W,W);t.pctx.drawImage(cv,0,0);t.done=d;t.dirty=true;if(t===TL)done=d});
+  stickers=u.stk;if(u.used)used=u.used;drawStickers(kctx,stickers);if(!quiet)tone(330,.18,'sine',.12);afterChange(true)}
 
 /* 이 그림만 처음부터 (되돌리기로 다시 살릴 수 있다) */
-function resetPic(){if(!owner||celebrating)return;pushUndo();pctx.clearRect(0,0,W,W);stickers=[];drawStickers(kctx,stickers);
-  done={};used={c:[],pt:false,rb:false};celebrated=false;drewSomething=false;$('award').hidden=true;
+function resetPic(){if(!owner||celebrating)return;const ts=tiles.filter(t=>t.owner);pushUndo(ts);
+  ts.forEach(t=>{t.pctx.clearRect(0,0,W,W);t.done={}});done=TL.done;stickers=[];drawStickers(kctx,stickers);used={c:[],pt:false,rb:false};celebrated=false;drewSomething=false;$('award').hidden=true;
   oneShot('erase',.9,.6);tone(500,.25,'sine',.1);tone(300,.3,'sine',.08,.12);hideHint();afterChange()}
 
 /* ───────── 반짝 효과 ───────── */
 const fx=$('fx'),fctx=fx.getContext('2d');let parts=[],fxOn=false;
 function sizeFx(){const s=$('stage').getBoundingClientRect();fx.width=s.width*devicePixelRatio;fx.height=s.height*devicePixelRatio}
-function boardToFx(x,y){const b=cvP.getBoundingClientRect(),s=$('stage').getBoundingClientRect();
-  return[(b.left-s.left+x*b.width/W)*devicePixelRatio,(b.top-s.top+y*b.height/W)*devicePixelRatio]}
+function boardToFx(x,y){const b=board.getBoundingClientRect(),s=$('stage').getBoundingClientRect();
+  return[(b.left-s.left+VIEW.x+x*VIEW.s)*devicePixelRatio,(b.top-s.top+VIEW.y+y*VIEW.s)*devicePixelRatio]}
 function sparkleAt(x,y,n){const [fx0,fy0]=boardToFx(x,y);for(let i=0;i<n;i++)parts.push({x:fx0,y:fy0,vx:(Math.random()-.5)*9,vy:-Math.random()*9-2,
   life:1,s:(8+Math.random()*10)*devicePixelRatio,c:['#ffd400','#fff3a0','#ffffff'][i%3],star:true});runFx()}
 function confetti(){const w=fx.width;for(let i=0;i<120;i++)parts.push({x:Math.random()*w,y:-20-Math.random()*200,vx:(Math.random()-.5)*3,vy:2+Math.random()*4,
@@ -701,29 +795,32 @@ function runFx(){if(fxOn)return;fxOn=true;(function f(){fctx.clearRect(0,0,fx.wi
 
 /* ───────── 다 칠하면 그림이 살아 움직인다 ───────── */
 let celebrating=false;
-const glowCache=new Map();
+let glowCache=new Map();
 function glow(id){if(glowCache.has(id))return glowCache.get(id);const m=mask(id),c=document.createElement('canvas');c.width=m.w;c.height=m.h;const x=c.getContext('2d');
   x.drawImage(m.c,0,0);x.globalCompositeOperation='source-in';x.fillStyle='#fff';x.fillRect(0,0,m.w,m.h);const g={c,x:m.x,y:m.y};glowCache.set(id,g);return g}
 function comeAlive(kind,ms=3200){return new Promise(res=>{
-  const snap=document.createElement('canvas');snap.width=snap.height=W;const sx=snap.getContext('2d');
-  sx.fillStyle='#fff';sx.fillRect(0,0,W,W);sx.drawImage(cvP,0,0);sx.drawImage(cvL,0,0);sx.drawImage(cvS,0,0);
-  const regs=Object.keys(done).map(Number).filter(id=>R[id]).sort((a,b)=>R[a].sy-R[b].sy).slice(0,24);
+  // 판 전체(타일 여러 장 + 스티커)를 한 장으로 찍어 움직인다. cvA 는 큰 판이면 줄여서 그린다(k)
+  const WW=worldW(),WH=worldH(),k=cvA.width/WW;
+  const snap=document.createElement('canvas');snap.width=cvA.width;snap.height=cvA.height;const sx=snap.getContext('2d');sx.scale(k,k);
+  sx.fillStyle='#fff';sx.fillRect(0,0,WW,WH);tiles.forEach(t=>{sx.drawImage(t.cvP,t.ox,t.oy);sx.drawImage(t.cvL,t.ox,t.oy)});sx.drawImage(cvS,0,0,WW,WH);
+  let regs=[];const prev=TL;tiles.forEach(t=>{if(!t.owner)return;useTile(t);Object.keys(done).map(Number).filter(id=>R[id]).forEach(id=>{const g=glow(id);regs.push({c:g.c,x:g.x+t.ox,y:g.y+t.oy,sy:R[id].sy+t.oy})})});useTile(prev);
+  regs=regs.sort((a,b)=>a.sy-b.sy).slice(0,24);
   cvA.classList.add('on');const t0=performance.now();
   (function frame(now){const t=(now-t0)/1000,T=ms/1000,env=Math.sin(Math.min(1,t/T)*Math.PI);
-    actx.setTransform(1,0,0,1,0,0);actx.fillStyle='#fff';actx.fillRect(0,0,W,W);actx.save();actx.translate(W/2,W/2);
+    actx.setTransform(k,0,0,k,0,0);actx.fillStyle='#fff';actx.fillRect(0,0,WW,WH);actx.save();actx.translate(WW/2,WH/2);
     if(kind==='hop'||kind==='party'){const h=Math.abs(Math.sin(t*(kind==='party'?9:7)))*60*env;actx.translate(0,-h+30*env);const sq=1+.06*Math.cos(t*14)*env;actx.scale(1/sq,sq);if(kind==='party')actx.rotate(Math.sin(t*9)*.05*env)}
     else if(kind==='spin'){actx.rotate(Math.sin(t*4)*.12*env);actx.scale(1+.05*env*Math.sin(t*8),1+.05*env*Math.sin(t*8))}
-    else if(kind==='sway'){actx.translate(0,W/2);actx.transform(1,0,Math.sin(t*5)*.09*env,1,0,0);actx.translate(0,-W/2)}
+    else if(kind==='sway'){actx.translate(0,WH/2);actx.transform(1,0,Math.sin(t*5)*.09*env,1,0,0);actx.translate(0,-WH/2)}
     else if(kind==='flutter'){actx.scale(1-.16*Math.abs(Math.sin(t*11))*env,1);actx.translate(0,-Math.sin(t*3)*25*env)}
     else if(kind==='waddle'){actx.rotate(Math.sin(t*8)*.08*env);actx.translate(Math.sin(t*2.5)*40*env,-Math.abs(Math.sin(t*8))*18*env)}
     else if(kind==='bloom'){const s=1+.07*Math.sin(t*6)*env;actx.scale(s,s)}
-    if(kind==='wave'){actx.translate(-W/2,-W/2);for(let y=0;y<W;y+=8){const dx=Math.sin(y/45+t*7)*16*env;actx.drawImage(snap,0,y,W,8,dx,y,W,8)}}
-    else{actx.drawImage(snap,-W/2,-W/2);actx.translate(-W/2,-W/2)}
-    if(kind==='shimmer'){const g=actx.createLinearGradient(-W+t*700%(W*2),0,t*700%(W*2),W);RAINBOW.forEach((c,i)=>g.addColorStop(i/6,c));
-      actx.globalAlpha=.28*env;actx.globalCompositeOperation='overlay';actx.fillStyle=g;actx.fillRect(0,0,W,W);actx.globalCompositeOperation='source-over';actx.globalAlpha=1}
+    if(kind==='wave'){actx.translate(-WW/2,-WH/2);for(let y=0;y<WH;y+=8){const dx=Math.sin(y/45+t*7)*16*env;actx.drawImage(snap,0,y*k,snap.width,8*k,dx,y,WW,8)}}
+    else{actx.drawImage(snap,-WW/2,-WH/2,WW,WH);actx.translate(-WW/2,-WH/2)}
+    if(kind==='shimmer'){const g=actx.createLinearGradient(-WW+t*700%(WW*2),0,t*700%(WW*2),WH);RAINBOW.forEach((c,i)=>g.addColorStop(i/6,c));
+      actx.globalAlpha=.28*env;actx.globalCompositeOperation='overlay';actx.fillStyle=g;actx.fillRect(0,0,WW,WH);actx.globalCompositeOperation='source-over';actx.globalAlpha=1}
     // 칠한 칸들이 차례로 반짝
-    actx.globalCompositeOperation='lighter';regs.forEach((id,i)=>{const st=.25+i*.12,k=(t-st)/.45;if(k<=0||k>=1)return;const g=glow(id);
-      actx.globalAlpha=Math.sin(k*Math.PI)*.55;actx.drawImage(g.c,g.x,g.y)});actx.globalAlpha=1;actx.globalCompositeOperation='source-over';
+    actx.globalCompositeOperation='lighter';regs.forEach((g,i)=>{const st=.25+i*.12,kk=(t-st)/.45;if(kk<=0||kk>=1)return;
+      actx.globalAlpha=Math.sin(kk*Math.PI)*.55;actx.drawImage(g.c,g.x,g.y)});actx.globalAlpha=1;actx.globalCompositeOperation='source-over';
     actx.restore();
     if(t<T)requestAnimationFrame(frame);else{cvA.classList.remove('on');res()}})(t0);
   setTimeout(()=>{cvA.classList.remove('on');res()},ms+600)})}
@@ -732,38 +829,70 @@ function comeAlive(kind,ms=3200){return new Promise(res=>{
 let hintTimer,handEl=null;
 function hideHint(){clearTimeout(hintTimer);if(handEl){handEl.remove();handEl=null}const hm=(AGES[(me()||{}).age]||AGES.kid).hint;if(hm)hintTimer=setTimeout(showHint,hm)}
 function showHint(){if(!owner||$('paint').hidden||celebrating)return;const todo=R.filter(r=>r&&r.count&&!done[r.id]).sort((a,b)=>b.area-a.area);if(!todo.length)return;
-  const r=todo[0],[x,y]=boardToFx(r.sx,r.sy);handEl=document.createElement('div');handEl.className='hand';handEl.textContent='👆';
+  const r=todo[0],[x,y]=boardToFx(r.sx+TL.ox,r.sy+TL.oy);handEl=document.createElement('div');handEl.className='hand';handEl.textContent='👆';
   handEl.style.left=x/devicePixelRatio+'px';handEl.style.top=y/devicePixelRatio+'px';$('stage').appendChild(handEl)}
 
 /* ───────── 화면 흐름 ───────── */
 let mode='free',storyIdx=0,celebrated=false,saveTimer,drewSomething=false;
 function show(id){for(const s of ['who','home','paint','book','gallery'])$(s).hidden=s!==id;if(id==='paint'){fit();requestAnimationFrame(fit)}if(id!=='paint')clearTimeout(hintTimer)}
-function fit(){board.style.width=board.style.height='0px';const s=$('stage').getBoundingClientRect(),z=Math.floor(Math.min(s.width,s.height));board.style.width=board.style.height=z+'px';sizeFx()}
+function fit(){sizeFx();if(VIEW.auto)fitView();else{clampView();applyView()}}
 addEventListener('resize',()=>{if(!$('paint').hidden)fit()});
 const nameOf=id=>{if(isBlank(id))return BLANK[id][0];const tl=taleOf(id);if(tl&&TALES[tl.t])return TALES[tl.t].title+' '+(tl.p+1);return(FREE.find(f=>f[0]===id)||[])[1]};
 function setBubble(text,tip){$('bubble').innerHTML=text+(tip?`<span class="tip">👪 함께 해요 · ${tip}</span>`:'')}
 
-function openPic(id,m,idx){store.set('last',m==='story'?'story':m==='tale'?'tale':'free');mode=m;storyIdx=idx||0;pic=id;done={};undoStack=[];stickers=[];used={c:[],pt:false,rb:false};celebrated=false;celebrating=false;drewSomething=false;
-  owner=null;sym=id==='mirror'?'m':id==='kaleido'?'k':'';glowCache.clear();$('award').hidden=true;
-  pctx.clearRect(0,0,W,W);lctx.clearRect(0,0,W,W);kctx.clearRect(0,0,W,W);board.classList.add('loading');$('nextBtn').hidden=true;
+function openPic(id,m,idx){store.set('last',m==='story'?'story':m==='tale'?'tale':'free');mode=m;storyIdx=idx||0;pic=id;undoStack=[];stickers=[];used={c:[],pt:false,rb:false};celebrated=false;celebrating=false;drewSomething=false;
+  $('award').hidden=true;$('addPick').hidden=true;const tok=++openTok;
+  clearTiles();kctx.clearRect(0,0,cvS.width,cvS.height);const t0=newTile(id,0,0);t0.sym=id==='mirror'?'m':id==='kaleido'?'k':'';useTile(t0);
+  board.classList.add('loading');$('nextBtn').hidden=true;
   const st=m==='story'?STORY[storyIdx]:null;
   if(m==='tale'){const pg=TALES[taleIdx].pages[pageIdx];setBubble(pg.tell,'“다음엔 어떻게 될까?” 하고 물어봐 주세요.');speak([`tale_${id}_tell`],300)}
   else if(st){setBubble(st.ask,st.tip);speak(['ask_'+st.id],300)}
   else if(isBlank(id)){setBubble(BLANK[id][2],'“무엇을 그렸는지 이야기해 줄래?” 하고 물어봐 주세요.');speak(['free_'+id],300)}
   else if(FLAGTIP[id]){setBubble(`<b>${nameOf(id)}</b> 국기예요. 이렇게 칠해요 <img class="fref" src="img/flagref/${id}.png" alt=""> <span style="font-size:.8em">${FLAGTIP[id]}</span>`);speak(['free_'+id],300)}
   else{setBubble(`<b>${nameOf(id)}</b> 그림이에요. 마음대로 칠해 봐요!`,'“무슨 색으로 칠하고 싶어? 왜?” 하고 물어봐 주세요.');speak(['free_'+id],300)}
-  show('paint');
-  const sv=store.get('pic:'+id);
-  const restore=()=>{const ready=()=>{fit();board.classList.remove('loading');hideHint();afterChange(true,true)};
-    if(sv){done=sv.d||{};stickers=sv.s||[];used=sv.u||used;drawStickers(kctx,stickers)}
-    if(sv&&sv.p){const p=new Image();p.onload=()=>{pctx.drawImage(p,0,0,W,W);ready()};p.onerror=ready;p.src=sv.p}else ready()};
-  if(isBlank(id)){setupBlank(sym);restore();return}
-  const img=new Image();img.onload=()=>{lctx.clearRect(0,0,W,W);const sc=Math.min(W/img.width,W/img.height);lctx.drawImage(img,(W-img.width*sc)/2,(W-img.height*sc)/2,img.width*sc,img.height*sc);
-    board.classList.remove('loading');setTimeout(()=>{analyze(img);restore()},30)};
-  img.onerror=()=>{board.classList.remove('loading');setBubble('그림을 아직 못 가져왔어요. 다른 그림을 골라 볼까요?')};img.src=src(id)}
+  // 더해 둔 그림(타일)들: 'scene:<첫 그림 id>' = 타일 목록 · 타일마다 'pic:<id>~<n>' (첫 타일은 예전 그대로 'pic:<id>')
+  const sv=store.get('pic:'+id),sc=store.get('scene:'+id);
+  if(sv){stickers=sv.s||[];used=sv.u||used}
+  ((sc&&sc.tiles)||[]).slice(1,MAXT).forEach((x,n)=>loadTile(newTile(x.id,x.col,x.row),store.get(`pic:${id}~${n+1}`),tok));
+  VIEW.auto=true;show('paint');drawStickers(kctx,stickers);
+  loadTile(t0,sv,tok,ok=>{board.classList.remove('loading');if(!ok){setBubble('그림을 아직 못 가져왔어요. 다른 그림을 골라 볼까요?');return}
+    fit();hideHint();afterChange(true,true)})}
+/* 타일 하나에 그림을 펼친다: 선 그림 → 칸 나누기(analyze) → 저장해 둔 색. 다른 타일을 칠하는 중이어도 끝나면 그 타일로 돌려놓는다 */
+function loadTile(t,sv,tok,cb){
+  const after=()=>{if(tok!==openTok)return;if(sv&&sv.d){t.done=sv.d;if(TL===t)done=t.done}
+    if(sv&&sv.p){t.url=sv.p;const p=new Image();p.onload=()=>{if(tok===openTok)t.pctx.drawImage(p,0,0,W,W);cb&&cb(true)};p.onerror=()=>cb&&cb(true);p.src=sv.p}else cb&&cb(true)};
+  const spread=f=>{const prev=TL;useTile(t);f();grab(t);useTile(prev||t)};
+  if(isBlank(t.id)){spread(()=>setupBlank(t.sym));after();return}
+  const img=new Image();img.onload=()=>{if(tok!==openTok)return;const sc=Math.min(W/img.width,W/img.height);
+    t.lctx.drawImage(img,(W-img.width*sc)/2,(W-img.height*sc)/2,img.width*sc,img.height*sc);
+    board.classList.remove('loading');setTimeout(()=>{if(tok!==openTok)return;spread(()=>analyze(img));after()},30)};
+  img.onerror=()=>{if(tok===openTok)cb&&cb(false)};img.src=src(t.id)}
 
-function saveNow(){if(!pic)return;clearTimeout(saveTimer);
-  store.set('pic:'+pic,{p:cvP.toDataURL('image/webp',.8),k:stickers.length?cvS.toDataURL('image/webp',.8):'',s:stickers,d:done,u:used})}
+/* ➕ 그림 더하기: 지금 판 오른쪽(한 줄 3장, 차면 아래)에 타일을 늘리고 고른 그림을 붙인다 */
+let addCat=null;
+function openAdd(){if(!TL||celebrating)return;if(tiles.length>=MAXT){setBubble(`그림판이 꽉 찼어요! 그림은 ${MAXT}장까지 붙일 수 있어요.`);tone(220,.2);return}
+  renderAdd();$('addPick').hidden=false}
+function renderAdd(){const cats=[...CATS,{id:'draw',name:'하얀 도화지',emoji:'🖍️',items:[['blank','하얀 도화지']]}];
+  if(!cats.find(c=>c.id===addCat))addCat=cats[0].id;const cur=cats.find(c=>c.id===addCat);
+  const tb=$('addTabs');tb.innerHTML='';cats.forEach(c=>{const b=document.createElement('button');b.textContent=c.emoji+' '+c.name;b.setAttribute('aria-pressed',c===cur);
+    b.onclick=()=>{addCat=c.id;renderAdd();tone(650,.08,'triangle',.08)};tb.appendChild(b)});
+  const g=$('addGrid');g.innerHTML='';g.scrollTop=0;cur.items.forEach(([id,name])=>{const b=document.createElement('button');b.setAttribute('aria-label',name);
+    b.innerHTML=(isBlank(id)?`<span class="big">${BLANK[id][1]}</span>`:`<img src="${src(id)}" alt="" loading="lazy">`)+`<span>${name}</span>`;
+    const im=b.querySelector('img');if(im)im.onerror=()=>b.remove();b.onclick=()=>{audio();$('addPick').hidden=true;addPic(id)};g.appendChild(b)})}
+function addPic(id){if(!TL||tiles.length>=MAXT)return;const n=tiles.length,t=newTile(id,n%COLS,(n/COLS)|0);
+  pushUndo([],t);t.dirty=true;fitView(true);oneShot('sparkle',.8);
+  setBubble(`<b>${nameOf(id)||'그림'}</b> 그림을 옆에 붙였어요!`,'두 손가락으로 벌리면 크게, 오므리면 작게 보여요. 두 손가락으로 끌면 움직여요.');
+  loadTile(t,null,openTok,ok=>{if(!ok){dropTile(t);undoStack=undoStack.filter(u=>u.add!==t);return}sparkleAt(t.ox+W/2,t.oy+W/2,12);afterChange()})}
+$('addClose').onclick=()=>{$('addPick').hidden=true};
+
+function saveNow(){if(!pic||!tiles.length||!tiles[0].owner)return;clearTimeout(saveTimer);sync();
+  const url=t=>{if(t.dirty||!t.url){t.url=t.cvP.toDataURL('image/webp',.8);t.dirty=false}return t.url},t0=tiles[0],one=tiles.length===1;
+  // 첫 타일 'pic:' 의 k = 첫 타일 자리만 오린 스티커 (첫 화면 · 그림책 작은 그림이 예전처럼 보이게)
+  let k='';if(stickers.length){if(one)k=cvS.toDataURL('image/webp',.8);else{const c=document.createElement('canvas');c.width=c.height=W;c.getContext('2d').drawImage(cvS,0,0);k=c.toDataURL('image/webp',.8)}}
+  store.set('pic:'+pic,{p:url(t0),k,s:stickers,d:t0.done,u:used});
+  if(one){store.del('scene:'+pic);return}
+  tiles.slice(1).forEach((t,n)=>{if(t.owner&&(t.dirty||!t.url))store.set(`pic:${pic}~${n+1}`,{p:url(t),d:t.done})});
+  store.set('scene:'+pic,{tiles:tiles.map(t=>({id:t.id,col:t.col,row:t.row})),sk:stickers.length?cvS.toDataURL('image/webp',.7):''})}
 function afterChange(quiet,initial){const p=progress();
   if(!initial){clearTimeout(saveTimer);saveTimer=setTimeout(saveNow,600)}
   if(celebrated){$('nextBtn').hidden=mode!=='story'&&mode!=='tale';return}
@@ -772,7 +901,7 @@ function afterChange(quiet,initial){const p=progress();
   else{$('nextBtn').textContent='다 했어! ⭐';$('nextBtn').hidden=false}
   // 완성은 「다 했어!」 단추를 누를 때만 (다운 2026-10-22 — 저절로 완성 없앰)
 }
-async function celebrate(){if(celebrated||celebrating)return;celebrating=true;celebrated=true;$('nextBtn').hidden=true;hideHint();clearTimeout(hintTimer);saveNow();
+async function celebrate(){if(celebrated||celebrating)return;celebrating=true;celebrated=true;useTile(tiles[0]);$('nextBtn').hidden=true;hideHint();clearTimeout(hintTimer);saveNow();
   fanfare();confetti();
   const st=mode==='story'?STORY[storyIdx]:null,pk=praiseKey();
   let main,keys;
@@ -794,7 +923,7 @@ $('nextBtn').onclick=()=>{audio();if(!celebrated){celebrate();return}if(celebrat
   saveNow();$('award').hidden=true;hush();
   if(mode==='tale'){if(pageIdx<4)openTale(taleIdx,pageIdx+1);else openTaleBook(taleIdx);return}
   if(storyIdx<STORY.length-1)openPic(STORY[storyIdx+1].id,'story',storyIdx+1);else openBook(0)};
-$('goHome').onclick=()=>{hush();if(pic)saveNow();pic=null;renderHome();show('home')};
+$('goHome').onclick=()=>{hush();if(pic)saveNow();pic=null;openTok++;clearTiles();undoStack=[];renderHome();show('home')};
 $('sayAgain').onclick=()=>{audio();if(lastKeys.length)speak(lastKeys)};
 
 /* 도구 · 크레용 · 무늬 · 스티커 */
@@ -803,9 +932,9 @@ function setTool(k){tool=k;document.querySelectorAll('#tools .tool[data-k]').for
 MAGICS.forEach(([k,ico,name],i)=>{const b=document.createElement('button');b.className='mg';b.textContent=ico;b.setAttribute('aria-label',name);
   b.setAttribute('aria-pressed',k===magic);b.onclick=()=>{audio();magic=k;document.querySelectorAll('.mg').forEach(x=>x.setAttribute('aria-pressed',x===b));
     tone(560+i*70,.15,'triangle',.1)};$('magics').appendChild(b)});
-TOOLS.forEach(([k,ico,name])=>{const b=document.createElement('button');b.className='tool';b.textContent=ico;b.setAttribute('aria-label',name);
-  if(k!=='undo'&&k!=='reset'&&k!=='tostk'){b.dataset.k=k;b.setAttribute('aria-pressed',k===tool)}
-  b.onclick=()=>{audio();if(k==='undo'){undo();return}if(k==='reset'){resetPic();return}if(k==='tostk'){makeMySticker();return}setTool(k);
+TOOLS.forEach(([k,ico,name])=>{const b=document.createElement('button');b.className='tool';if(ico.startsWith('<svg'))b.innerHTML=ico;else b.textContent=ico;b.setAttribute('aria-label',name);
+  if(k!=='undo'&&k!=='reset'&&k!=='tostk'&&k!=='addpic'){b.dataset.k=k;b.setAttribute('aria-pressed',k===tool)}
+  b.onclick=()=>{audio();if(k==='addpic'){openAdd();oneShot('sparkle',.5,.5);return}if(k==='undo'){undo();return}if(k==='reset'){resetPic();return}if(k==='tostk'){makeMySticker();return}setTool(k);
     if(k==='fill'||k==='sticker')oneShot('sparkle',.6,.7);else oneShot(rubKind(),.8,.4)};$('tools').appendChild(b)});
 function selectColor(c,b,i){audio();color=c;if(tool==='eraser')setTool('brush');
   document.querySelectorAll('.crayon').forEach(x=>x.setAttribute('aria-pressed',x===b));tone(440+(i||0)*45,.15,'sine',.1);
@@ -866,11 +995,15 @@ $('bookSay').onclick=()=>{audio();speak(lastKeys)};
 $('bookHome').onclick=()=>{hush();renderHome();show('home')};
 
 /* ───────── 내 그림 모아보기 ───────── */
-function composite(id){return new Promise(res=>{const sv=store.get('pic:'+id),c=document.createElement('canvas');c.width=c.height=W;const x=c.getContext('2d');
-  x.fillStyle='#fff';x.fillRect(0,0,W,W);const load=s=>new Promise(r=>{if(!s)return r(null);const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=s});
-  Promise.all([load(sv&&sv.p),isBlank(id)?null:load(src(id)),load(sv&&sv.k)]).then(([p,l,k])=>{if(p)x.drawImage(p,0,0,W,W);
-    if(l){x.globalCompositeOperation='multiply';const s=Math.min(W/l.width,W/l.height);x.drawImage(l,(W-l.width*s)/2,(W-l.height*s)/2,l.width*s,l.height*s);x.globalCompositeOperation='source-over'}
-    if(k)x.drawImage(k,0,0,W,W);res(c.toDataURL('image/jpeg',.9))})})}
+function composite(id){return new Promise(res=>{const sc=store.get('scene:'+id),list=sc&&sc.tiles&&sc.tiles.length>1?sc.tiles:[{id,col:0,row:0}];
+  const WW=Math.max(...list.map(x=>x.col+1))*W,WH=Math.max(...list.map(x=>x.row+1))*W,k=Math.min(1,2048/Math.max(WW,WH)),c=document.createElement('canvas');
+  c.width=Math.round(WW*k);c.height=Math.round(WH*k);const x=c.getContext('2d');x.scale(k,k);x.fillStyle='#fff';x.fillRect(0,0,WW,WH);
+  const load=s=>new Promise(r=>{if(!s)return r(null);const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=s});
+  const sv0=store.get('pic:'+id),multi=list.length>1;
+  Promise.all(list.map((tl,n)=>{const sv=n?store.get(`pic:${id}~${n}`):sv0;return Promise.all([load(sv&&sv.p),isBlank(tl.id)?null:load(src(tl.id))])}).concat([load(multi?sc.sk:sv0&&sv0.k)]))
+  .then(all=>{const kk=all.pop();list.forEach((tl,n)=>{const [p,l]=all[n],ox=tl.col*W,oy=tl.row*W;if(p)x.drawImage(p,ox,oy,W,W);
+      if(l){x.globalCompositeOperation='multiply';const s=Math.min(W/l.width,W/l.height);x.drawImage(l,ox+(W-l.width*s)/2,oy+(W-l.height*s)/2,l.width*s,l.height*s);x.globalCompositeOperation='source-over'}});
+    if(kk)x.drawImage(kk,0,0,multi?WW:W,multi?WH:W);res(c.toDataURL('image/jpeg',.9))})})}
 function openGallery(){const g=$('galGrid');g.innerHTML='';const ids=[...STORY.map(s=>s.id),...taleIds(),...Object.keys(BLANK),...FREE.map(f=>f[0])].filter(id=>{const sv=store.get('pic:'+id);return sv&&sv.p});
   if(!ids.length)g.innerHTML='<div class="empty">아직 칠한 그림이 없어요. 그림을 칠하면 여기에 모여요!</div>';
   ids.forEach(id=>{const b=thumb(id,nameOf(id)||'이야기 그림');b.onclick=async()=>{$('viewImg').src=await composite(id);$('viewer').hidden=false};g.appendChild(b)});show('gallery')}
@@ -908,7 +1041,7 @@ var renderHome=function(){const prog=store.get('story')||0,fr=store.get('friends
 document.querySelectorAll('.who').forEach(b=>b.onclick=()=>{audio();store.set('reader',b.dataset.r);renderHome();speak(['free_blank'])});
 $('startStory').onclick=()=>{audio();const prog=store.get('story')||0;if(prog>=STORY.length)openBook(0);else openPic(STORY[prog].id,'story',prog)};
 let holdT;const rs=$('resetAll');
-rs.addEventListener('pointerdown',()=>{holdT=setTimeout(()=>{[...STORY.map(s=>s.id),...FREE.map(f=>f[0]),...Object.keys(BLANK),...taleIds()].forEach(id=>store.del('pic:'+id));TALES.forEach(t=>store.del('tale:'+t.id));
+rs.addEventListener('pointerdown',()=>{holdT=setTimeout(()=>{[...STORY.map(s=>s.id),...FREE.map(f=>f[0]),...Object.keys(BLANK),...taleIds()].forEach(id=>{store.del('pic:'+id);store.del('scene:'+id);for(let n=1;n<MAXT;n++)store.del(`pic:${id}~${n}`)});TALES.forEach(t=>store.del('tale:'+t.id));
   store.del('story');store.del('friends');buildStickers();rs.textContent='처음부터 다시 시작해요';tone(300,.3);renderHome()},2000)});
 ['pointerup','pointerleave','pointercancel'].forEach(ev=>rs.addEventListener(ev,()=>clearTimeout(holdT)));
 document.querySelectorAll('.bgm').forEach(b=>{const btn=b.closest('button');btn.onclick=e=>{e.stopPropagation();audio();bgmToggle()}});bgmBtn();
