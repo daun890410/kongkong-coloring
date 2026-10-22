@@ -304,7 +304,7 @@ KKL.set(.08);setTimeout(()=>KKL.set(1),9000);</script>
   <div class="top">
     <button class="round" id="goHome" aria-label="처음 화면">🏠</button>
     <div class="bubble" id="bubble"></div>
-    <button class="round fsBtn" aria-label="전체 화면">⛶</button><button class="round bgm" aria-label="음악">🎵</button><button class="round" id="sayAgain" aria-label="다시 듣기">🔊</button>
+    <button class="round fsBtn" aria-label="전체 화면">⛶</button><button class="round bgm" aria-label="음악">🎵</button><button class="round" id="savePhone" aria-label="핸드폰에 저장">📥</button><button class="round" id="sayAgain" aria-label="다시 듣기">🔊</button>
   </div>
   <div class="stage" id="stage">
     <div class="board loading" id="board">
@@ -335,7 +335,7 @@ KKL.set(.08);setTimeout(()=>KKL.set(1),9000);</script>
 
 <section id="gallery" class="screen" hidden>
   <div class="top"><button class="round" id="galHome" aria-label="처음 화면">🏠</button>
-    <div class="bubble">내 그림 모아보기 <span class="tip">그림을 누르면 크게 보여요. 어른은 큰 그림을 길게 눌러 사진으로 저장할 수 있어요.</span></div></div>
+    <div class="bubble">내 그림 모아보기 <span class="tip">그림을 누르면 크게 보여요. 「📥 핸드폰에 저장」을 누르면 사진첩에 들어가요.</span></div></div>
   <div class="grid" id="galGrid"></div>
 </section>
 <div class="viewer" id="picker" hidden><div class="card pick">
@@ -350,7 +350,7 @@ KKL.set(.08);setTimeout(()=>KKL.set(1),9000);</script>
   <div class="addgrid" id="addGrid"></div>
   <button class="who" id="addClose">닫기</button>
 </div></div>
-<div class="viewer" id="viewer" hidden><div class="card"><img id="viewImg" alt="내가 칠한 그림"><p>휴대폰 · 태블릿: 그림을 길게 누르면 사진으로 저장돼요</p><button class="bigbtn" id="viewClose">닫기</button></div></div>
+<div class="viewer" id="viewer" hidden><div class="card"><img id="viewImg" alt="내가 칠한 그림"><div class="prow"><button class="bigbtn" id="viewSave">📥 핸드폰에 저장</button><button class="who" id="viewClose">닫기</button></div></div></div>
 
 <script>
 /* ───────── 이야기 · 그림 목록 (글은 voice/lines.py 와 똑같다) ───────── */
@@ -1089,7 +1089,18 @@ function composite(id){return new Promise(res=>{const sc=store.get('scene:'+id),
     if(kk)x.drawImage(kk,0,0,multi?WW:W,multi?WH:W);res(c.toDataURL('image/jpeg',.9))})})}
 function openGallery(){const g=$('galGrid');g.innerHTML='';const ids=[...STORY.map(s=>s.id),...taleIds(),...Object.keys(BLANK),...FREE.map(f=>f[0])].filter(id=>{const sv=store.get('pic:'+id);return sv&&sv.p});
   if(!ids.length)g.innerHTML='<div class="empty">아직 칠한 그림이 없어요. 그림을 칠하면 여기에 모여요!</div>';
-  ids.forEach(id=>{const b=thumb(id,nameOf(id)||'이야기 그림');b.onclick=async()=>{$('viewImg').src=await composite(id);$('viewer').hidden=false};g.appendChild(b)});show('gallery')}
+  ids.forEach(id=>{const b=thumb(id,nameOf(id)||'이야기 그림');b.onclick=async()=>{viewId=id;$('viewImg').src=await composite(id);$('viewer').hidden=false};g.appendChild(b)});show('gallery')}
+/* 원하는 그림만 핸드폰에 저장 (다운 2026-10-22): 휴대폰 · 태블릿은 공유 창(→ 「이미지 저장」 = 사진첩) · 컴퓨터는 바로 내려받기 */
+let viewId=null;
+async function savePhone(id){if(!id)return;const url=await composite(id),blob=await (await fetch(url)).blob();
+  const name=`콩콩색칠_${(nameOf(id)||'그림').replace(/\s+/g,'')}_${new Date().toISOString().slice(0,10)}.jpg`,file=new File([blob],name,{type:'image/jpeg'});
+  if(matchMedia('(pointer:coarse)').matches&&navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({files:[file]});return true}catch(e){if(e&&e.name==='AbortError')return false}}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},3000);return true}
+$('viewSave').onclick=async()=>{audio();oneShot('sparkle',.6,.5);await savePhone(viewId)};
+$('savePhone').onclick=async()=>{audio();if(!pic||!tiles.length||!tiles[0].owner)return;saveNow();oneShot('sparkle',.6,.5);
+  if(await savePhone(pic))setBubble('<b>핸드폰에 저장</b>했어요! 사진첩에서 볼 수 있어요. 📸')};
 $('openGallery').onclick=()=>{audio();openGallery()};
 $('galHome').onclick=()=>{renderHome();show('home')};
 $('viewClose').onclick=()=>{$('viewer').hidden=true};
