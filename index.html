@@ -104,6 +104,8 @@ h2 .link{margin-left:auto;font-size:18px;background:#fff;border-radius:999px;pad
 /* 늘어나는 그림판: world = 타일(1024 칸)들을 이어 붙인 큰 도화지 · 확대/이동은 transform 으로 */
 .world{position:absolute;left:0;top:0;transform-origin:0 0}
 .tsh{position:absolute;width:1024px;height:1024px;box-shadow:0 12px 0 var(--edge),0 0 0 4px var(--edge)}
+.tile-x{position:absolute;width:1024px;height:1024px;box-sizing:border-box;border:16px dashed #ff5f5f;background:rgba(255,95,95,.1);display:grid;place-items:center}
+.tile-x b{width:300px;height:300px;border-radius:50%;background:#ff5f5f;color:#fff;font-size:190px;line-height:1;display:grid;place-items:center;font-weight:normal;box-shadow:0 12px 0 rgba(0,0,0,.15)}
 .slot-add{position:absolute;width:1024px;height:1024px;box-sizing:border-box;border:16px dashed #ff8fc1;border-radius:70px;background:rgba(255,255,255,.6);display:grid;place-items:center;animation:slotb 1.1s ease-in-out infinite}
 .slot-add img{position:absolute;inset:14%;width:72%;height:72%;object-fit:contain;opacity:.3}
 .slot-add b{position:relative;font-size:340px;line-height:1;color:#ff5fa2;font-weight:normal}
@@ -392,7 +394,7 @@ const ICO={
  tostk:'<svg viewBox="0 0 48 48"><path d="M7 7h34v23L30 41H7z" fill="#fff" stroke="#4a4a4a" stroke-width="3" stroke-linejoin="round"/><path d="M41 30H30v11z" fill="#ffd400" stroke="#4a4a4a" stroke-width="3" stroke-linejoin="round"/><path d="m22 10 3.5 7 7.5 1-5.5 5.2 1.4 7.6L22 27.2l-6.9 3.6 1.4-7.6L11 18l7.5-1z" fill="#ff7eb6" stroke="#e0508e" stroke-width="1.5" stroke-linejoin="round"/></svg>',
  reset:'<svg viewBox="0 0 48 48"><path d="M10 5h20l9 9v29H10z" fill="#fff" stroke="#4a4a4a" stroke-width="3" stroke-linejoin="round"/><path d="M30 5v9h9" fill="none" stroke="#4a4a4a" stroke-width="3" stroke-linejoin="round"/><path d="m24 18 2.4 6 6 2.4-6 2.4-2.4 6-2.4-6-6-2.4 6-2.4z" fill="#ffd400" stroke="#e0a514" stroke-width="1.2" stroke-linejoin="round"/><path d="m15 32 1.2 3 3 1.2-3 1.2-1.2 3-1.2-3-3-1.2 3-1.2z" fill="#4cc3ff"/><path d="m33 31 1 2.4 2.4 1-2.4 1-1 2.4-1-2.4-2.4-1 2.4-1z" fill="#ff7eb6"/></svg>',
  eraser:'<svg viewBox="0 0 48 48"><g transform="rotate(-32 24 22)"><rect x="5" y="14" width="38" height="17" rx="4" fill="#ff9ec4" stroke="#4a4a4a" stroke-width="3"/><path d="M27 14v17" stroke="#4a4a4a" stroke-width="3"/><path d="M9 18h15" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".7"/></g><path d="M7 43h12M24 43h6" stroke="#b9b0a4" stroke-width="3" stroke-linecap="round"/></svg>'};
-const TOOLS=[['addpic','➕','그림 더하기'],['pan','✋','판 옮기기'],['brush','🖌️','붓'],['crayon','🖍️','크레용'],['glitter','✨','반짝이'],['magic','🪄','마법 붓'],['fill','🪣','톡 채우기'],['sticker','🌟','스티커'],['eraser',ICO.eraser,'지우개'],['wipe','🧼','칸 지우기'],['undo',ICO.undo,'되돌리기'],['tostk',ICO.tostk,'스티커로 만들기'],['reset',ICO.reset,'이 그림 처음부터']];
+const TOOLS=[['addpic','➕','그림 더하기'],['droppic','🗑️','그림 빼기'],['pan','✋','판 옮기기'],['brush','🖌️','붓'],['crayon','🖍️','크레용'],['glitter','✨','반짝이'],['magic','🪄','마법 붓'],['fill','🪣','톡 채우기'],['sticker','🌟','스티커'],['eraser',ICO.eraser,'지우개'],['wipe','🧼','칸 지우기'],['undo',ICO.undo,'되돌리기'],['tostk',ICO.tostk,'스티커로 만들기'],['reset',ICO.reset,'이 그림 처음부터']];
 const STK_SETS=[['반짝',['⭐','🌟','✨','💖','❤️','🌈','🎀','👑','💎','🫧','🌙','☀️']],
  ['그림',[]],
  ['동물',['🐶','🐱','🐰','🐻','🐼','🦁','🐯','🐸','🐥','🐧','🦄','🐞','🦋','🐝','🐠','🐳','🦖','🐢']],
@@ -535,13 +537,26 @@ function newTile(id,col,row){const t={id,col,row,ox:col*W,oy:row*W,owner:null,is
   [t.cvP,t.cvL].forEach(c=>{c.width=c.height=W;t.el.appendChild(c)});t.pctx=t.cvP.getContext('2d');t.lctx=t.cvL.getContext('2d');
   world.insertBefore(t.sh,world.firstChild);world.insertBefore(t.el,cvS);tiles.push(t);place(t);layout();return t}
 function place(t){t.ox=t.col*W;t.oy=t.row*W;[t.el,t.sh].forEach(e=>{e.style.left=t.ox+'px';e.style.top=t.oy+'px'})}
-function clearTiles(){tiles.forEach(t=>{t.el.remove();t.sh.remove()});tiles=[];TL=null;endPlace()}
+function clearTiles(){tiles.forEach(t=>{t.el.remove();t.sh.remove()});tiles=[];TL=null;endPlace();endRemove()}
 function dropTile(t){const n=tiles.indexOf(t);if(n<1)return;t.el.remove();t.sh.remove();tiles.splice(n,1);if(TL===t){TL=null;useTile(tiles[0])}
   if(pic)store.del(`pic:${pic}~${n}`);normalize();layout();fitView(true)}
 /* 왼쪽 · 위에 붙이면 칸 번호가 음수가 된다 → 판 전체를 밀어 가장 왼쪽 위가 (0,0) 이 되게 (스티커 · 되돌리기 속 스티커도 같이) */
-function normalize(){const dc=-Math.min(...tiles.map(t=>t.col)),dr=-Math.min(...tiles.map(t=>t.row));if(!dc&&!dr)return;
-  tiles.forEach(t=>{t.col+=dc;t.row+=dr;place(t)});const mv=s=>{s.x+=dc*W;s.y+=dr*W};stickers.forEach(mv);undoStack.forEach(u=>u.stk.forEach(mv));
-  VIEW.x-=dc*W*VIEW.s;VIEW.y-=dr*W*VIEW.s}
+function normalize(){const dc=-Math.min(...tiles.map(t=>t.col)),dr=-Math.min(...tiles.map(t=>t.row));if(!dc&&!dr)return[0,0];
+  tiles.forEach(t=>{t.col+=dc;t.row+=dr;place(t)});const mv=s=>{s.x+=dc*W;s.y+=dr*W};stickers.forEach(mv);
+  undoStack.forEach(u=>{u.stk.forEach(mv);if(u.rm){u.rm.t.col+=dc;u.rm.t.row+=dr}});   // 되돌리기로 살릴 뺀 그림도 같이 민다
+  VIEW.x-=dc*W*VIEW.s;VIEW.y-=dr*W*VIEW.s;return[dc,dr]}
+/* 붙인 그림 빼기: 🗑️ 를 누르면 붙인 그림마다 ✕ → 톡 누른 그림을 뺀다 (첫 그림은 못 뺌 · 그 위 스티커도 같이 · 되돌리기로 살아남) */
+let removing=null;
+function startRemove(){endPlace();endRemove();const ts=tiles.slice(1).filter(t=>t.owner);
+  if(!ts.length){setBubble('뺄 그림이 없어요. 붙인 그림만 뺄 수 있어요.');tone(220,.2);return}
+  removing=ts.map(t=>{const e=document.createElement('div');e.className='tile-x';e.style.left=t.ox+'px';e.style.top=t.oy+'px';e.innerHTML='<b>✕</b>';world.appendChild(e);return e});
+  setBubble('뺄 그림을 톡 눌러요. 다른 데를 누르면 그만해요.');fitView(true);tone(400,.12,'triangle',.08)}
+function endRemove(){if(!removing)return;removing.forEach(e=>e.remove());removing=null}
+function removeTile(t){const n=tiles.indexOf(t);if(n<1)return;pushUndo([]);undoStack[undoStack.length-1].rm={t,n};
+  stickers=stickers.filter(s=>!(s.x>=t.ox&&s.y>=t.oy&&s.x<t.ox+W&&s.y<t.oy+W));
+  t.el.remove();t.sh.remove();tiles.splice(n,1);if(TL===t){TL=null;useTile(tiles[0])}tiles.slice(n).forEach(x=>x.moved=true);
+  normalize();drawStickers(kctx,stickers);layout();fitView(true);oneShot('erase',.8,.4);tone(420,.15,'sine',.08);
+  setBubble(`<b>${nameOf(t.id)||'그림'}</b> 그림을 뺐어요. 되돌리기로 다시 붙일 수 있어요.`);afterChange()}
 const tileAt=(x,y)=>tiles.find(t=>x>=t.ox&&y>=t.oy&&x<t.ox+W&&y<t.oy+W);
 const worldW=()=>Math.max(1,...tiles.map(t=>t.col+1))*W,worldH=()=>Math.max(1,...tiles.map(t=>t.row+1))*W;
 /* 보이는 범위 = 타일들 (+ 붙일 자리를 고르는 중이면 ➕ 자리까지) */
@@ -725,14 +740,15 @@ function praiseKey(){if(used.rb)return'p_rainbow';if(used.pt)return'p_pattern';c
 
 /* 스티커 */
 /* 스티커 크기 바꾸기 (다운 2026-10-22): 붙이거나 톡 누른 스티커에 점선 동그라미 + 손잡이 → 손잡이를 끌거나 굵기 단추로 크기 조절 */
-let selStk=null;const selR=s=>s.s*(s.e.startsWith('my:')?.75:.6),hSize=()=>40/VIEW.s;
+let selStk=null;const selR=s=>s.s*(s.e.startsWith('my:')?.75:.6);
+const hSize=s=>Math.max(16/VIEW.s,Math.min(30/VIEW.s,selR(s)*.55)),hOff=s=>(selR(s)+hSize(s)*.45)*.707;   // 단추 크기 · 가운데에서 대각선 거리
 function updateSel(){const el=$('stkSel'),s=selStk;if(!el)return;if(tool!=='sticker'||!s||!stickers.includes(s)){el.hidden=true;return}
-  const r=selR(s),h=hSize(),hd=el.firstChild;el.hidden=false;
+  const r=selR(s),h=hSize(s),o=hOff(s),hd=el.firstChild;el.hidden=false;
   Object.assign(el.style,{left:s.x-r+'px',top:s.y-r+'px',width:2*r+'px',height:2*r+'px',borderWidth:3/VIEW.s+'px'});
-  Object.assign(hd.style,{width:h+'px',height:h+'px',left:r+r*.707-h/2+'px',top:r+r*.707-h/2+'px',boxShadow:`0 0 0 ${3/VIEW.s}px #ff7eb6`});
-  Object.assign(el.children[1].style,{width:h+'px',height:h+'px',left:r+r*.707-h/2+'px',top:r-r*.707-h/2+'px',fontSize:h*.6+'px',boxShadow:`0 0 0 ${3/VIEW.s}px #fff`})}
-function hitX(x,y){const s=selStk;if(tool!=='sticker'||!s||!stickers.includes(s))return false;const r=selR(s);return Math.hypot(x-s.x-r*.707,y-s.y+r*.707)<hSize()*.8}
-function hitHandle(x,y){const s=selStk;if(tool!=='sticker'||!s||!stickers.includes(s))return false;const r=selR(s);return Math.hypot(x-s.x-r*.707,y-s.y-r*.707)<hSize()*.8}
+  Object.assign(hd.style,{width:h+'px',height:h+'px',left:r+o-h/2+'px',top:r+o-h/2+'px',boxShadow:`0 0 0 ${2/VIEW.s}px #ff7eb6`});
+  Object.assign(el.children[1].style,{width:h+'px',height:h+'px',left:r+o-h/2+'px',top:r-o-h/2+'px',fontSize:h*.6+'px',boxShadow:`0 0 0 ${2/VIEW.s}px #fff`})}
+function hitX(x,y){const s=selStk;if(tool!=='sticker'||!s||!stickers.includes(s)||Math.hypot(x-s.x,y-s.y)<selR(s)*.8)return false;const o=hOff(s);return Math.hypot(x-s.x-o,y-s.y+o)<hSize(s)*.65}
+function hitHandle(x,y){const s=selStk;if(tool!=='sticker'||!s||!stickers.includes(s)||Math.hypot(x-s.x,y-s.y)<selR(s)*.8)return false;const o=hOff(s);return Math.hypot(x-s.x-o,y-s.y-o)<hSize(s)*.65}
 function drawStickers(ctx,list){if(ctx===kctx)updateSel();ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);ctx.textAlign='center';ctx.textBaseline='middle';
   for(const s of list){ctx.save();ctx.translate(s.x,s.y);ctx.rotate(s.r);if(s.e.startsWith('my:')){const im=myImg(s.e,()=>drawStickers(ctx,list));if(im.ok){const z=s.s*1.6,k=im.width/im.height;ctx.drawImage(im,-z*Math.min(1,k)/2,-z/Math.max(1,k)/2,z*Math.min(1,k),z/Math.max(1,k))}}
     else if(s.e.startsWith('img:')){const im=stkImg(s.e,()=>drawStickers(ctx,list));if(im.ok){const z=s.s*1.15;ctx.drawImage(im,-z/2,-z/2,z,z)}}
@@ -767,6 +783,7 @@ function pinchMove(){const [a,b]=[...ptrs.values()],p=pinch,d=Math.hypot(a.x-b.x
 board.addEventListener('pointerdown',e=>{ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(ptrs.size>=2){cancelTouch();if(ptrs.size===2)pinchStart();return}
   if(hold||!TL||pointerId!==null||celebrating)return;audio();
+  if(removing){const [x,y]=toXY(e),t=tileAt(x,y);endRemove();if(t&&t!==tiles[0]&&t.owner)removeTile(t);else{setBubble('빼기를 그만했어요.');fitView(true)}return}
   if(placing){const [x,y]=toXY(e),c=Math.floor(x/W),r=Math.floor(y/W),id=placing.id,ok=placing.slots.some(s=>s[0]===c&&s[1]===r);endPlace();
     if(ok)addPic(id,c,r);else{setBubble('붙이기를 그만했어요.');fitView(true)}return}
   if(tool==='pan'){pointerId=e.pointerId;panS={x:e.clientX,y:e.clientY,vx:VIEW.x,vy:VIEW.y};try{board.setPointerCapture(e.pointerId)}catch(_){}return}
@@ -823,6 +840,8 @@ function pushUndo(ts,add){sync();ts=ts||[TL];
     stk:stickers.map(s=>({...s})),used:JSON.parse(JSON.stringify(used))});if(undoStack.length>6)undoStack.shift()}
 function undo(quiet){const u=undoStack.pop();if(!u){if(!quiet)tone(220,.15);return}fills.forEach(f=>f());fills.clear();
   stickers=u.stk;if(u.add)dropTile(u.add);
+  if(u.rm){const {t:rt,n}=u.rm;tiles.splice(n,0,rt);world.insertBefore(rt.sh,world.firstChild);world.insertBefore(rt.el,cvS);place(rt);
+    tiles.slice(n).forEach(x=>x.moved=true);normalize();layout();fitView(true)}
   u.ts.forEach(({t,cv,done:d})=>{if(!tiles.includes(t))return;t.pctx.clearRect(0,0,W,W);t.pctx.drawImage(cv,0,0);t.done=d;t.dirty=true;if(t===TL)done=d});
   stickers=u.stk;if(u.used)used=u.used;drawStickers(kctx,stickers);if(!quiet)tone(330,.18,'sine',.12);afterChange(true)}
 
@@ -955,8 +974,9 @@ function saveNow(){if(!pic||!tiles.length||!tiles[0].owner)return;clearTimeout(s
   // 첫 타일 'pic:' 의 k = 첫 타일 자리만 오린 스티커 (첫 화면 · 그림책 작은 그림이 예전처럼 보이게)
   let k='';if(stickers.length){if(one)k=cvS.toDataURL('image/webp',.8);else{const c=document.createElement('canvas');c.width=c.height=W;c.getContext('2d').drawImage(cvS,-t0.ox,-t0.oy);k=c.toDataURL('image/webp',.8)}}
   store.set('pic:'+pic,{p:url(t0),k,s:stickers,d:t0.done,u:used});
+  for(let n=tiles.length;n<MAXT;n++)store.del(`pic:${pic}~${n}`);   // 빠진 그림 자리는 지운다
   if(one){store.del('scene:'+pic);return}
-  tiles.slice(1).forEach((t,n)=>{if(t.owner&&(t.dirty||!t.url))store.set(`pic:${pic}~${n+1}`,{p:url(t),d:t.done})});
+  tiles.slice(1).forEach((t,n)=>{if(t.owner&&(t.dirty||!t.url||t.moved)){store.set(`pic:${pic}~${n+1}`,{p:url(t),d:t.done});t.moved=false}});
   store.set('scene:'+pic,{tiles:tiles.map(t=>({id:t.id,col:t.col,row:t.row})),sk:stickers.length?cvS.toDataURL('image/webp',.7):''})}
 function afterChange(quiet,initial){const p=progress();
   if(!initial){clearTimeout(saveTimer);saveTimer=setTimeout(saveNow,600)}
@@ -999,11 +1019,11 @@ MAGICS.forEach(([k,ico,name],i)=>{const b=document.createElement('button');b.cla
     tone(560+i*70,.15,'triangle',.1)};$('magics').appendChild(b)});
 /* 도구 줄 묶음 (다운 2026-10-22 「펜끼리 뭉치고 지우개끼리 뭉치고 · 두 번 눌러도 되니까」):
    묶음을 누르면 마지막에 쓰던 도구로 바로 바뀌고, 옆에 그 묶음 도구들이 펼쳐진다 → 하나를 톡 */
-var GROUPS=[{k:'board',ico:'🧩',name:'그림판',items:['addpic','pan']},{k:'pen',name:'펜',items:['brush','crayon','glitter','magic','fill']},
+var GROUPS=[{k:'board',ico:'🧩',name:'그림판',items:['addpic','droppic','pan']},{k:'pen',name:'펜',items:['brush','crayon','glitter','magic','fill']},
   {k:'stk',name:'스티커',items:['sticker','tostk']},{k:'erase',name:'지우개',items:['eraser','wipe','reset']},{k:'undo',items:['undo']}];
 const TDEF=Object.fromEntries(TOOLS.map(([k,ico,name])=>[k,{ico,name}])),STATE=new Set(['brush','crayon','glitter','magic','fill','sticker','eraser','wipe','pan']);
 const lastIn={pen:'brush',stk:'sticker',erase:'eraser'};let subFor=null;
-function runTool(k){audio();closeSub();if(k==='addpic'){openAdd();oneShot('sparkle',.5,.5);return}if(k==='undo'){undo();return}if(k==='reset'){resetPic();return}if(k==='tostk'){makeMySticker();return}
+function runTool(k){audio();closeSub();if(k==='addpic'){openAdd();oneShot('sparkle',.5,.5);return}if(k==='droppic'){startRemove();return}if(k==='undo'){undo();return}if(k==='reset'){resetPic();return}if(k==='tostk'){makeMySticker();return}
   setTool(k);if(k==='pan'){tone(500,.1,'triangle',.08);return}if(k==='fill'||k==='sticker')oneShot('sparkle',.6,.7);else oneShot(rubKind(),.8,.4)}
 function drawGroups(){if(!GROUPS[0].btn)return;GROUPS.forEach(g=>{const on=g.items.includes(tool);if(on&&g.k in lastIn)lastIn[g.k]=tool;
   g.btn.innerHTML=TDEF[g.k in lastIn?lastIn[g.k]:g.items[0]]&&!g.ico?TDEF[g.k in lastIn?lastIn[g.k]:g.items[0]].ico:g.ico;g.btn.setAttribute('aria-pressed',on)})}
