@@ -76,6 +76,8 @@ h2 .link{margin-left:auto;font-size:18px;background:#fff;border-radius:999px;pad
 .kid{display:flex;flex-direction:column;align-items:center;gap:4px;background:#fff;border-radius:24px;padding:16px 8px;box-shadow:0 4px 0 var(--edge);font-size:22px}
 .kid .e{font-size:58px;font-family:var(--emoji);line-height:1}.kid small{font-family:var(--hand);font-size:16px;color:var(--mute)}
 .kid.add{background:var(--sun);box-shadow:0 4px 0 #e0a514}
+.kid{position:relative}.kids.del .kid:not(.add)::after{content:'✕';position:absolute;right:8px;top:6px;width:34px;height:34px;border-radius:50%;background:#e8604c;color:#fff;font-size:20px;display:grid;place-items:center}
+.kids.del .kid.add{display:none}.kidDel{align-self:center;margin:14px auto 0;display:block;font-size:17px;background:#fff;border-radius:999px;padding:6px 16px;box-shadow:0 3px 0 var(--edge);color:var(--mute)}
 .newkid{display:flex;flex-direction:column;gap:12px;background:var(--paper);border-radius:24px;padding:16px;box-shadow:0 4px 0 var(--edge)}
 .ava{display:flex;flex-wrap:wrap;gap:8px}.ava button{font-size:34px;font-family:var(--emoji);width:56px;height:56px;border-radius:50%;background:#fff;box-shadow:0 3px 0 var(--edge)}
 .ava button[aria-pressed="true"],.ages button[aria-pressed="true"]{outline:4px solid var(--leaf)}
@@ -265,6 +267,7 @@ KKL.set(.08);setTimeout(()=>KKL.set(1),9000);</script>
 <section id="who" class="screen" hidden>
   <div class="cover"><div><h1>누가 색칠할까요?</h1><p>아이마다 칠한 그림과 이야기가 따로 저장돼요.</p></div></div>
   <div class="kids" id="kids"></div>
+  <button class="kidDel" id="kidDel" hidden>🗑️ 친구 지우기</button>
   <div class="newkid" id="newkid" hidden>
     <h2>새 친구 만들기 <small>어른이 도와주세요</small></h2>
     <div class="ava" id="avaPick"></div>
@@ -1168,11 +1171,23 @@ rs.addEventListener('pointerdown',()=>{holdT=setTimeout(()=>{[...STORY.map(s=>s.
 ['pointerup','pointerleave','pointercancel'].forEach(ev=>rs.addEventListener(ev,()=>clearTimeout(holdT)));
 document.querySelectorAll('.bgm').forEach(b=>{const btn=b.closest('button');btn.onclick=e=>{e.stopPropagation();audio();bgmToggle()}});bgmBtn();
 let newAva='🐰',newAge='kid';
-function renderWho(){const list=profiles(),box=$('kids');box.innerHTML='';
+/* 친구 지우기 (다운 2026-10-24): 단추를 누르면 카드에 ✕ → 누르면 한 번 더 묻고 그 아이의 칠한 그림 · 기록까지 지운다 */
+let delMode=false;
+function delKid(k){const list=profiles(),others=list.filter(x=>x.id!==k.id).map(x=>x.id);
+  if(!confirm(`${k.ava} ${k.name||'친구'}를 지울까요?
+칠한 그림과 기록도 모두 지워져요.`))return;
+  try{Object.keys(localStorage).forEach(key=>{if(!key.startsWith('kk:'))return;const r=key.slice(3);
+    if(k.id==='p0'?(!SHARED.has(r)&&!others.some(o=>r.startsWith(o+':'))):r.startsWith(k.id+':'))localStorage.removeItem(key)});   // 첫 아이(p0) 기록은 앞말 없이 저장돼 있다
+    localStorage.setItem('kk:profiles',JSON.stringify(list.filter(x=>x.id!==k.id)));
+    if(PID===k.id){PID='';localStorage.removeItem('kk:pid')}}catch(e){}
+  tone(300,.3);if(profiles().length<1)delMode=false;renderWho()}
+$('kidDel').onclick=()=>{audio();delMode=!delMode;renderWho()};
+function renderWho(){const list=profiles(),box=$('kids');box.innerHTML='';box.classList.toggle('del',delMode);
+  $('kidDel').hidden=!list.length;$('kidDel').textContent=delMode?'✔ 다 지웠어요':'🗑️ 친구 지우기';
   list.forEach(k=>{const b=document.createElement('button');b.className='kid';b.innerHTML=`<span class="e">${k.ava}</span>${k.name||'친구'}`;
-    b.onclick=()=>{audio();pickKid(k.id)};box.appendChild(b)});
+    b.onclick=()=>{audio();if(delMode)delKid(k);else pickKid(k.id)};box.appendChild(b)});
   const add=document.createElement('button');add.className='kid add';add.innerHTML='<span class="e">＋</span>새 친구';add.onclick=()=>{$('newkid').hidden=false;$('kidName').focus()};box.appendChild(add);
-  $('newkid').hidden=list.length>0;
+  $('newkid').hidden=list.length>0||delMode;
   $('avaPick').innerHTML='';AVATARS.forEach(e=>{const b=document.createElement('button');b.textContent=e;b.setAttribute('aria-pressed',e===newAva);
     b.onclick=()=>{newAva=e;$('avaPick').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b))};$('avaPick').appendChild(b)});
   $('agePick').innerHTML='';Object.entries(AGES).forEach(([k,a])=>{const b=document.createElement('button');b.innerHTML=`${a.name}<small>${a.say}</small>`;b.setAttribute('aria-pressed',k===newAge);
@@ -1199,7 +1214,7 @@ $('updBtn').onclick=async()=>{audio();const b=$('updBtn');b.disabled=true;b.last
 function land(where){renderHome();if(where==='tale'){openSec('secTale');show('home');return}
   if(where==='story'){const prog=store.get('story')||0;if(prog<STORY.length){openPic(STORY[prog].id,'story',prog);return}}
   show('home');if(where==='free')setTimeout(()=>$('freeThumbs').scrollIntoView({block:'start'}),50)}
-$('meBtn').onclick=()=>{audio();hush();renderWho()};
+$('meBtn').onclick=()=>{audio();hush();delMode=false;renderWho()};
 const _rh=renderHome;renderHome=function(){_rh();const k=me();$('meBtn').innerHTML=k?`<span>${k.ava}</span>${k.name||'친구'} · 바꾸기`:'친구 고르기'};
 document.querySelectorAll('.jump button').forEach(b=>b.onclick=()=>{audio();if(b.dataset.j==='freeH'&&curCat){curCat=null;renderHome()}$(b.dataset.j).scrollIntoView({behavior:'smooth',block:'start'})});
 function fsToggle(){const d=document,el=d.documentElement;try{if(d.fullscreenElement||d.webkitFullscreenElement){(d.exitFullscreen||d.webkitExitFullscreen).call(d)}
